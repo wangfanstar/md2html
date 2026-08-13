@@ -135,6 +135,54 @@ class TestConvert(unittest.TestCase):
         self.assertNotIn('GT SDK Code Generator', html)
 
 
+class TestRecursive(unittest.TestCase):
+    def _tree(self):
+        tmp = tempfile.TemporaryDirectory()
+        root = Path(tmp.name)
+        (root / 'a.md').write_text('# A', encoding='utf-8')
+        (root / 'b.md').write_text('# B', encoding='utf-8')
+        (root / 'sub').mkdir()
+        (root / 'sub' / 'c.md').write_text('# C', encoding='utf-8')
+        (root / '.hidden').mkdir()
+        (root / '.hidden' / 'd.md').write_text('# D', encoding='utf-8')
+        (root / 'note.txt').write_text('not markdown', encoding='utf-8')
+        return tmp
+
+    def test_recursive_converts_nested_md(self):
+        with self._tree() as tmp:
+            root = Path(tmp)
+            self.assertEqual(md2html.main(['-r', str(root)]), 0)
+            self.assertTrue((root / 'a.html').exists())
+            self.assertTrue((root / 'b.html').exists())
+            self.assertTrue((root / 'sub' / 'c.html').exists())
+            self.assertFalse((root / 'note.txt.html').exists())
+
+    def test_recursive_skips_hidden_dirs(self):
+        with self._tree() as tmp:
+            root = Path(tmp)
+            md2html.main(['-r', str(root)])
+            self.assertFalse((root / '.hidden' / 'd.html').exists())
+
+    def test_recursive_with_file_input_errors(self):
+        with self._tree() as tmp:
+            root = Path(tmp)
+            self.assertEqual(md2html.main(['-r', str(root / 'a.md')]), 1)
+
+    def test_recursive_with_output_errors(self):
+        with self._tree() as tmp:
+            root = Path(tmp)
+            self.assertEqual(md2html.main(['-r', '-o', 'x.html', str(root)]), 1)
+
+    def test_recursive_with_title_errors(self):
+        with self._tree() as tmp:
+            root = Path(tmp)
+            self.assertEqual(md2html.main(['-r', '--title', 'T', str(root)]), 1)
+
+    def test_recursive_empty_dir_errors(self):
+        with tempfile.TemporaryDirectory() as tmp:
+            self.assertEqual(md2html.main(['-r', tmp]), 1)
+
+
 class TestMain(unittest.TestCase):
     def test_main_missing_input_returns_1(self):
         with tempfile.TemporaryDirectory() as tmp:

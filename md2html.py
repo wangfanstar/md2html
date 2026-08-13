@@ -782,7 +782,34 @@ def build_parser():
         '--title', default=None,
         help='HTML title (default: the first h1 heading in the document, '
              'or the input filename)')
+    parser.add_argument(
+        '-r', '--recursive', action='store_true',
+        help='convert all .md files under the input directory recursively '
+             '(requires a directory; cannot be used with -o/--title)')
     return parser
+
+
+def convert_recursive(directory):
+    """Convert all .md files under directory recursively, skipping hidden
+    files and directories. Returns the process exit code."""
+    directory = Path(directory).resolve()
+    md_files = sorted(
+        p for p in directory.rglob('*.md')
+        if not any(part.startswith('.') for part in p.relative_to(directory).parts)
+    )
+    if not md_files:
+        print(f"ERROR: no .md files found under {directory}", file=sys.stderr)
+        return 1
+    ok = fail = 0
+    for p in md_files:
+        try:
+            convert(p, p.with_suffix('.html'))
+            ok += 1
+        except Exception as e:
+            print(f"ERROR: {p}: {e}", file=sys.stderr)
+            fail += 1
+    print(f"Recursive conversion done: {ok} ok, {fail} failed")
+    return 0 if fail == 0 else 1
 
 
 def resolve_paths(args, cwd=None):
@@ -838,6 +865,30 @@ def _setup_console_encoding():
 def main(argv=None):
     _setup_console_encoding()
     args = build_parser().parse_args(argv)
+    if args.recursive:
+        if args.output is not None:
+            print("ERROR: -o/--output cannot be used with -r/--recursive",
+                  file=sys.stderr)
+            return 1
+        if args.title is not None:
+            print("ERROR: --title cannot be used with -r/--recursive",
+                  file=sys.stderr)
+            return 1
+        cwd = Path.cwd()
+        if args.input is None:
+            dir_path = cwd
+        else:
+            p = Path(args.input)
+            dir_path = p if p.is_absolute() else cwd / p
+        dir_path = dir_path.resolve()
+        if dir_path.is_file():
+            print(f"ERROR: -r/--recursive requires a directory, got a file: {dir_path}",
+                  file=sys.stderr)
+            return 1
+        if not dir_path.is_dir():
+            print(f"ERROR: {dir_path} not found", file=sys.stderr)
+            return 1
+        return convert_recursive(dir_path)
     resolved = resolve_paths(args)
     if resolved is None:
         return 1

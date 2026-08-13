@@ -54,7 +54,7 @@ python3 md2html.py 文档.md
 ## 命令行用法
 
 ```
-usage: md2html [-h] [-o OUTPUT] [--title TITLE] [input]
+usage: md2html [-h] [-o OUTPUT] [--title TITLE] [-r] [input]
 
 positional arguments:
   input                输入的 .md 文件或包含 README.md 的目录
@@ -65,6 +65,8 @@ options:
                        (默认:与输入同名 .html;目录模式为 README.html)
   --title TITLE        手动指定 HTML 标题
                        (默认:文档第一个 h1,无 h1 时为输入文件名)
+  -r, --recursive      递归转换输入目录下所有 .md 文件
+                       (需要目录输入;不能与 -o/--title 同时使用)
 ```
 
 ### 模式示例
@@ -76,12 +78,23 @@ options:
 | `md2html.py guide.md` | `guide.md` | `guide.html` |
 | `md2html.py guide.md -o out/guide.html` | `guide.md` | `out/guide.html`(自动建目录) |
 | `md2html.py --title "使用指南" guide.md` | `guide.md` | `guide.html`,标题为「使用指南」 |
+| `md2html.py -r docs/` | `docs/` 及子目录所有 `.md` | 各源文件同名 `.html`(保留目录结构) |
 
 ### 标题与页脚
 
 - HTML 标题来源:`--title` 参数 > 文档第一个 `#` 标题 > 输入文件名(不含扩展名)
 - 侧边栏副标题:输入文件名
 - 页脚:源文件名 + 生成日期(自动取当天,格式 `YYYY-MM`)
+
+### 递归模式(-r)
+
+`md2html.py -r [目录]`(省略目录时默认为当前目录)递归转换目录下所有 `.md` 文件:
+
+- 输出与源文件同名的 `.html`,保留子目录结构
+- 自动跳过隐藏文件与隐藏目录(如 `.git`、`.venv`)
+- 不能与 `-o/--output`、`--title` 同时使用(会报错并以退出码 1 结束)
+- 单个文件转换失败不影响其余文件,最后汇总数量;有失败时退出码为 1
+- 启动脚本同样支持:`md2html.bat -r` / `./md2html.sh -r`
 
 ## 启动脚本
 
@@ -92,7 +105,7 @@ options:
 
 - 两个脚本都通过**自身所在目录**定位 `md2html.py`,可在任意工作目录调用(不依赖调用时的当前目录)
 - 所有命令行参数原样透传,退出码原样传递(输入缺失、输出为目录等错误统一返回 1,便于脚本集成)
-- 无参数运行(含双击)会批量转换脚本所在目录的所有 `.md` 文件(不含子目录);带参数则原样透传给 `md2html.py`
+- 无参数运行(含双击)会批量转换脚本所在目录的所有 `.md` 文件(不含子目录);带参数则原样透传给 `md2html.py`(含 `-r` 递归模式)
 - 双击 `md2html.bat` 时窗口会停留到按键(便于查看结果);命令行调用无停留,退出码直接返回
 - 找不到 Python 时输出错误提示并以退出码 1 结束
 - 实测说明:简体中文系统(GBK 代码页)的 cmd 下,中文文件名可正常使用;其他代码页建议改用 sh 或完整路径调用

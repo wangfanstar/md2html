@@ -450,6 +450,7 @@ td code { font-size: 0.81rem; }
 <ul>
   <li><a href="#模式示例"><span class="toc-num">3.1</span> 模式示例</a></li>
   <li><a href="#标题与页脚"><span class="toc-num">3.2</span> 标题与页脚</a></li>
+  <li><a href="#递归模式-r"><span class="toc-num">3.3</span> 递归模式(-r)</a></li>
 </ul>
 </li>
   <li><a href="#启动脚本"><span class="toc-num">4</span> 启动脚本</a></li>
@@ -527,7 +528,7 @@ md2html.bat 文档.md -o 输出\文档.html
 </code></pre></div>
 
 <h2 id="命令行用法"><span class="sec-num">3</span> 命令行用法</h2>
-<div class="highlight"><pre><span></span><code><span class="k">usage</span><span class="err">:</span><span class="w"> </span><span class="n">md2html</span><span class="w"> </span><span class="o">[</span><span class="n">-h</span><span class="o">]</span><span class="w"> </span><span class="o">[</span><span class="n">-o OUTPUT</span><span class="o">]</span><span class="w"> </span><span class="o">[</span><span class="n">--title TITLE</span><span class="o">]</span><span class="w"> </span><span class="o">[</span><span class="n">input</span><span class="o">]</span>
+<div class="highlight"><pre><span></span><code><span class="k">usage</span><span class="err">:</span><span class="w"> </span><span class="n">md2html</span><span class="w"> </span><span class="o">[</span><span class="n">-h</span><span class="o">]</span><span class="w"> </span><span class="o">[</span><span class="n">-o OUTPUT</span><span class="o">]</span><span class="w"> </span><span class="o">[</span><span class="n">--title TITLE</span><span class="o">]</span><span class="w"> </span><span class="o">[</span><span class="n">-r</span><span class="o">]</span><span class="w"> </span><span class="o">[</span><span class="n">input</span><span class="o">]</span>
 
 <span class="n">positional</span><span class="w"> </span><span class="nl">arguments</span><span class="p">:</span>
 <span class="w">  </span><span class="k">input</span><span class="w">                </span><span class="n">输入的</span><span class="w"> </span><span class="p">.</span><span class="n">md</span><span class="w"> </span><span class="n">文件或包含</span><span class="w"> </span><span class="n">README</span><span class="p">.</span><span class="n">md</span><span class="w"> </span><span class="n">的目录</span>
@@ -538,6 +539,8 @@ md2html.bat 文档.md -o 输出\文档.html
 <span class="w">                       </span><span class="p">(</span><span class="nl">默认</span><span class="p">:</span><span class="n">与输入同名</span><span class="w"> </span><span class="p">.</span><span class="n">html</span><span class="p">;</span><span class="n">目录模式为</span><span class="w"> </span><span class="n">README</span><span class="p">.</span><span class="n">html</span><span class="p">)</span>
 <span class="w">  </span><span class="c1">--title TITLE        手动指定 HTML 标题</span>
 <span class="w">                       </span><span class="p">(</span><span class="nl">默认</span><span class="p">:</span><span class="n">文档第一个</span><span class="w"> </span><span class="n">h1</span><span class="p">,</span><span class="n">无</span><span class="w"> </span><span class="n">h1</span><span class="w"> </span><span class="n">时为输入文件名</span><span class="p">)</span>
+<span class="w">  </span><span class="o">-</span><span class="n">r</span><span class="p">,</span><span class="w"> </span><span class="c1">--recursive      递归转换输入目录下所有 .md 文件</span>
+<span class="w">                       </span><span class="p">(</span><span class="n">需要目录输入</span><span class="p">;</span><span class="n">不能与</span><span class="w"> </span><span class="o">-</span><span class="n">o</span><span class="o">/</span><span class="c1">--title 同时使用)</span>
 </code></pre></div>
 
 <h3 id="模式示例"><span class="sec-num">3.1</span> 模式示例</h3>
@@ -575,6 +578,11 @@ md2html.bat 文档.md -o 输出\文档.html
 <td><code>guide.md</code></td>
 <td><code>guide.html</code>,标题为「使用指南」</td>
 </tr>
+<tr>
+<td><code>md2html.py -r docs/</code></td>
+<td><code>docs/</code> 及子目录所有 <code>.md</code></td>
+<td>各源文件同名 <code>.html</code>(保留目录结构)</td>
+</tr>
 </tbody>
 </table>
 <h3 id="标题与页脚"><span class="sec-num">3.2</span> 标题与页脚</h3>
@@ -582,6 +590,15 @@ md2html.bat 文档.md -o 输出\文档.html
 <li>HTML 标题来源:<code>--title</code> 参数 &gt; 文档第一个 <code>#</code> 标题 &gt; 输入文件名(不含扩展名)</li>
 <li>侧边栏副标题:输入文件名</li>
 <li>页脚:源文件名 + 生成日期(自动取当天,格式 <code>YYYY-MM</code>)</li>
+</ul>
+<h3 id="递归模式-r"><span class="sec-num">3.3</span> 递归模式(-r)</h3>
+<p><code>md2html.py -r [目录]</code>(省略目录时默认为当前目录)递归转换目录下所有 <code>.md</code> 文件:</p>
+<ul>
+<li>输出与源文件同名的 <code>.html</code>,保留子目录结构</li>
+<li>自动跳过隐藏文件与隐藏目录(如 <code>.git</code>、<code>.venv</code>)</li>
+<li>不能与 <code>-o/--output</code>、<code>--title</code> 同时使用(会报错并以退出码 1 结束)</li>
+<li>单个文件转换失败不影响其余文件,最后汇总数量;有失败时退出码为 1</li>
+<li>启动脚本同样支持:<code>md2html.bat -r</code> / <code>./md2html.sh -r</code></li>
 </ul>
 <h2 id="启动脚本"><span class="sec-num">4</span> 启动脚本</h2>
 <table>
@@ -608,7 +625,7 @@ md2html.bat 文档.md -o 输出\文档.html
 <ul>
 <li>两个脚本都通过<strong>自身所在目录</strong>定位 <code>md2html.py</code>,可在任意工作目录调用(不依赖调用时的当前目录)</li>
 <li>所有命令行参数原样透传,退出码原样传递(输入缺失、输出为目录等错误统一返回 1,便于脚本集成)</li>
-<li>无参数运行(含双击)会批量转换脚本所在目录的所有 <code>.md</code> 文件(不含子目录);带参数则原样透传给 <code>md2html.py</code></li>
+<li>无参数运行(含双击)会批量转换脚本所在目录的所有 <code>.md</code> 文件(不含子目录);带参数则原样透传给 <code>md2html.py</code>(含 <code>-r</code> 递归模式)</li>
 <li>双击 <code>md2html.bat</code> 时窗口会停留到按键(便于查看结果);命令行调用无停留,退出码直接返回</li>
 <li>找不到 Python 时输出错误提示并以退出码 1 结束</li>
 <li>实测说明:简体中文系统(GBK 代码页)的 cmd 下,中文文件名可正常使用;其他代码页建议改用 sh 或完整路径调用</li>

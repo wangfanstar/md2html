@@ -1,0 +1,1020 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>md2html.py — Markdown → HTML 转换工具</title>
+<style>
+/* ============================================================
+   Design Tokens
+   ============================================================ */
+:root {
+    --sidebar-width: 300px;
+    --sidebar-bg: #111318;
+    --sidebar-text: #8b949e;
+    --sidebar-active: #e6edf3;
+    --sidebar-hover: #1a1d25;
+    --sidebar-accent: #6cb6ff;
+    --sidebar-border: #1e2128;
+
+    --bg: #ffffff;
+    --bg-secondary: #f8f9fb;
+    --text: #1f2328;
+    --text-secondary: #656d76;
+    --border: #d0d7de;
+    --border-light: #e8ecf1;
+    --code-bg: #f6f8fa;
+    --table-stripe: #f6f8fa;
+    --link: #0969da;
+    --heading: #0d1117;
+    --inline-code: #bf1a2f;
+    --inline-code-bg: #fff0f1;
+
+    --font-mono: "Cascadia Code", "Fira Code", "JetBrains Mono", "SF Mono", "Consolas", "Liberation Mono", monospace;
+    --font-sans: -apple-system, BlinkMacSystemFont, "Segoe UI", "Noto Sans SC", "PingFang SC", "Microsoft YaHei", Helvetica, Arial, sans-serif;
+
+    --radius-sm: 4px;
+    --radius-md: 8px;
+    --radius-lg: 12px;
+    --shadow-xs: 0 1px 1px rgba(0,0,0,0.03);
+    --shadow-sm: 0 1px 3px rgba(0,0,0,0.05);
+    --shadow-md: 0 4px 12px rgba(0,0,0,0.08);
+}
+
+@media (prefers-color-scheme: dark) {
+    :root {
+        --bg: #0d1117;
+        --bg-secondary: #111820;
+        --text: #c9d1d9;
+        --text-secondary: #8b949e;
+        --border: #30363d;
+        --border-light: #21262d;
+        --code-bg: #161b22;
+        --table-stripe: #0d1117;
+        --link: #6cb6ff;
+        --heading: #f0f6fc;
+        --inline-code: #ff7b72;
+        --inline-code-bg: #2d1114;
+    }
+}
+
+/* ============================================================
+   Reset & Base
+   ============================================================ */
+*, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+html { scroll-behavior: smooth; font-size: 15px; }
+body {
+    font-family: var(--font-sans);
+    background: var(--bg);
+    color: var(--text);
+    line-height: 1.72;
+    display: flex;
+    min-height: 100vh;
+    -webkit-font-smoothing: antialiased;
+    -moz-osx-font-smoothing: grayscale;
+}
+a { color: var(--link); text-decoration: none; }
+a:hover { text-decoration: underline; }
+
+/* ============================================================
+   Sidebar — dark panel, always
+   ============================================================ */
+.sidebar {
+    position: fixed; top: 0; left: 0;
+    width: var(--sidebar-width); height: 100vh;
+    background: var(--sidebar-bg);
+    color: var(--sidebar-text);
+    overflow-y: auto; overflow-x: hidden;
+    z-index: 100;
+    display: flex; flex-direction: column;
+    scrollbar-width: thin;
+    scrollbar-color: #2a2e38 transparent;
+    border-right: 1px solid var(--sidebar-border);
+}
+.sidebar::-webkit-scrollbar { width: 4px; }
+.sidebar::-webkit-scrollbar-track { background: transparent; }
+.sidebar::-webkit-scrollbar-thumb { background: #2a2e38; border-radius: 2px; }
+
+.sidebar-header {
+    padding: 22px 20px 16px;
+    border-bottom: 1px solid var(--sidebar-border);
+    flex-shrink: 0;
+}
+.sidebar-header h2 {
+    font-size: 1rem; font-weight: 700; color: #e6edf3;
+    letter-spacing: -0.01em; margin: 0 0 2px;
+}
+.sidebar-header .subtitle {
+    font-size: 0.66rem; color: #484f58;
+    text-transform: uppercase; letter-spacing: 0.12em; font-weight: 600;
+}
+
+.sidebar-nav { padding: 6px 0; flex: 1; overflow-y: auto; }
+.sidebar-nav ul { list-style: none; padding: 0; margin: 0; }
+.sidebar-nav li { margin: 0; }
+
+.sidebar-nav a {
+    display: flex; align-items: baseline; gap: 5px;
+    padding: 4px 20px;
+    color: var(--sidebar-text);
+    font-size: 0.8rem; text-decoration: none;
+    border-left: 3px solid transparent;
+    transition: background 0.12s, border-color 0.12s, color 0.12s;
+    white-space: nowrap; overflow: hidden; text-overflow: ellipsis;
+}
+.sidebar-nav a:hover {
+    background: var(--sidebar-hover);
+    color: var(--sidebar-active);
+    text-decoration: none;
+}
+
+/* Section number badge in sidebar */
+.toc-num {
+    display: inline-block; min-width: 22px;
+    font-size: 0.66rem; font-weight: 600;
+    color: var(--sidebar-accent); opacity: 0.65;
+    text-align: right; flex-shrink: 0;
+    font-family: var(--font-mono); letter-spacing: -0.03em;
+}
+.sidebar-nav a.active .toc-num { opacity: 1; }
+
+/* h2-level links */
+.sidebar-nav > ul > li > a {
+    font-weight: 600; font-size: 0.83rem; padding: 6px 20px; color: #c4cdd9;
+}
+.sidebar-nav > ul > li > a .toc-num { font-size: 0.7rem; min-width: 16px; color: #6cb6ff; }
+/* h3-level links */
+.sidebar-nav ul ul a { padding-left: 38px; font-size: 0.78rem; }
+.sidebar-nav ul ul a .toc-num { font-size: 0.64rem; min-width: 28px; color: #8b949e; }
+/* h4-level links */
+.sidebar-nav ul ul ul a { padding-left: 56px; font-size: 0.75rem; color: #6e7681; }
+.sidebar-nav ul ul ul a .toc-num { font-size: 0.62rem; min-width: 34px; color: #484f58; }
+
+/* Active state */
+.sidebar-nav a.active {
+    background: linear-gradient(90deg, rgba(108,182,255,0.14) 0%, rgba(108,182,255,0.01) 100%);
+    border-left-color: var(--sidebar-accent); color: #e6edf3;
+}
+
+.sidebar-footer {
+    padding: 10px 20px; border-top: 1px solid var(--sidebar-border);
+    font-size: 0.66rem; color: #484f58; flex-shrink: 0;
+}
+
+/* ============================================================
+   Main Content — generous but bounded width for readability
+   ============================================================ */
+.main {
+    margin-left: var(--sidebar-width);
+    flex: 1; min-width: 0;
+    padding: 48px 56px 120px;
+    max-width: 1240px;
+}
+
+/* ============================================================
+   Typography
+   ============================================================ */
+h1, h2, h3, h4 { color: var(--heading); font-weight: 600; line-height: 1.3; position: relative; }
+
+h1 {
+    font-size: 2rem; font-weight: 700; margin: 0 0 8px;
+    padding-bottom: 16px; border-bottom: 2px solid var(--border);
+    letter-spacing: -0.03em;
+}
+h2 {
+    font-size: 1.45rem; margin: 56px 0 18px;
+    padding-bottom: 12px; border-bottom: 1px solid var(--border-light);
+    letter-spacing: -0.02em;
+}
+h3 {
+    font-size: 1.18rem; margin: 40px 0 14px;
+    padding-left: 16px; border-left: 3px solid var(--sidebar-accent);
+}
+h4 { font-size: 1.04rem; margin: 30px 0 12px; }
+
+/* Section number in content headings */
+.sec-num {
+    display: inline-block; margin-right: 10px;
+    font-family: var(--font-mono); font-weight: 600;
+    color: var(--sidebar-accent); opacity: 0.72;
+    letter-spacing: -0.03em; user-select: none;
+}
+h2 .sec-num { font-size: 0.78em; opacity: 0.8; }
+h3 .sec-num { font-size: 0.82em; }
+h4 .sec-num { font-size: 0.86em; }
+
+p { margin: 0 0 16px; }
+strong { font-weight: 600; color: var(--heading); }
+
+/* ============================================================
+   Admonition / Callout boxes (via blockquote)
+   ============================================================ */
+blockquote {
+    margin: 22px 0; padding: 14px 20px;
+    border-left: 4px solid;
+    border-radius: 0 var(--radius-md) var(--radius-md) 0;
+    font-size: 0.9rem; line-height: 1.65;
+    position: relative;
+}
+blockquote::before {
+    content: '';
+    position: absolute; left: 0; top: 0; bottom: 0;
+    width: 4px; border-radius: 4px 0 0 4px;
+}
+/* Default tip style */
+blockquote {
+    background: #f0f7ff;
+    border-color: #58a6ff;
+    color: #1f6fb0;
+}
+@media (prefers-color-scheme: dark) {
+    blockquote { background: #0d1f33; color: #79c0ff; }
+}
+/* Warning style: first strong contains "注意"/"重要"/"警告" */
+blockquote:has(strong) {
+    background: #fff8e1;
+    border-color: #d29922;
+    color: #7a5d00;
+}
+@media (prefers-color-scheme: dark) {
+    blockquote:has(strong) { background: #2d2200; color: #d29922; }
+}
+blockquote p { margin-bottom: 6px; }
+blockquote p:last-child { margin-bottom: 0; }
+
+hr {
+    border: none; border-top: 1px solid var(--border-light);
+    margin: 40px 0;
+}
+
+/* ============================================================
+   Code — inline & blocks
+   ============================================================ */
+code {
+    font-family: var(--font-mono);
+    font-size: 0.87em;
+    background: var(--code-bg);
+    padding: 2px 7px; border-radius: var(--radius-sm);
+}
+pre {
+    margin: 20px 0; border-radius: var(--radius-md);
+    overflow-x: auto;
+    border: 1px solid var(--border);
+    background: var(--code-bg);
+    box-shadow: var(--shadow-xs);
+    position: relative;
+}
+pre code {
+    display: block; padding: 18px 22px;
+    border: none; background: transparent;
+    font-size: 0.82rem; line-height: 1.6; tab-size: 4;
+}
+h1 code, h2 code, h3 code, h4 code {
+    font-size: 0.9em; background: transparent; border: none; padding: 0; color: inherit;
+}
+
+/* Inline code in prose */
+p code, li code, td code, th code {
+    background: var(--inline-code-bg);
+    color: var(--inline-code);
+    border: 1px solid rgba(191,26,47,0.12);
+    font-size: 0.85em; padding: 1px 6px;
+}
+@media (prefers-color-scheme: dark) {
+    p code, li code, td code, th code {
+        border-color: rgba(255,123,114,0.18);
+    }
+}
+
+/* ============================================================
+   Syntax Highlighting (Pygments)
+   ============================================================ */
+.highlight { background: transparent !important; }
+.highlight pre { margin: 0; border: none; background: transparent !important; box-shadow: none; }
+
+@media (prefers-color-scheme: light) {
+    .highlight .k, .highlight .kd { color: #cf222e; font-weight: 600; }
+    .highlight .kt { color: #cf222e; }
+    .highlight .n  { color: #1f2328; }
+    .highlight .s, .highlight .s1, .highlight .s2, .highlight .se { color: #0a3069; }
+    .highlight .c, .highlight .c1, .highlight .cm, .highlight .cp { color: #6e7781; font-style: italic; }
+    .highlight .p  { color: #1f2328; }
+    .highlight .m, .highlight .mi, .highlight .mf { color: #0550ae; }
+    .highlight .o  { color: #cf222e; }
+    .highlight .nf, .highlight .na { color: #8250df; }
+    .highlight .nb, .highlight .bp { color: #0550ae; }
+    .highlight .nc { color: #8250df; }
+    .highlight .nv { color: #953800; }
+    .highlight .cpf { color: #0a3069; }
+    .highlight .w  { color: #afb8c1; }
+    .highlight .gh { color: #0550ae; font-weight: 600; }
+}
+
+@media (prefers-color-scheme: dark) {
+    .highlight .k, .highlight .kd { color: #ff7b72; }
+    .highlight .kt { color: #ff7b72; }
+    .highlight .n  { color: #c9d1d9; }
+    .highlight .s, .highlight .s1, .highlight .s2, .highlight .se { color: #a5d6ff; }
+    .highlight .c, .highlight .c1, .highlight .cm, .highlight .cp { color: #8b949e; font-style: italic; }
+    .highlight .p  { color: #c9d1d9; }
+    .highlight .m, .highlight .mi, .highlight .mf { color: #79c0ff; }
+    .highlight .o  { color: #ff7b72; }
+    .highlight .nf, .highlight .na { color: #d2a8ff; }
+    .highlight .nb, .highlight .bp { color: #79c0ff; }
+    .highlight .nc { color: #d2a8ff; }
+    .highlight .nv { color: #ffa657; }
+    .highlight .cpf { color: #a5d6ff; }
+    .highlight .w  { color: #484f58; }
+    .highlight .gh { color: #79c0ff; font-weight: 600; }
+}
+
+/* ============================================================
+   Tables — clean & spacious
+   ============================================================ */
+table {
+    width: 100%; border-collapse: separate; border-spacing: 0;
+    margin: 22px 0; font-size: 0.88rem;
+    border: 1px solid var(--border);
+    border-radius: var(--radius-md); overflow: hidden;
+}
+thead { background: var(--bg-secondary); }
+th {
+    font-weight: 600; text-align: left;
+    padding: 12px 16px;
+    border-bottom: 2px solid var(--border);
+    font-size: 0.78rem; color: var(--text-secondary);
+    text-transform: uppercase; letter-spacing: 0.05em;
+}
+td {
+    padding: 11px 16px;
+    border-bottom: 1px solid var(--border-light);
+    vertical-align: top;
+}
+tr:last-child td { border-bottom: none; }
+tr:nth-child(even) { background: var(--table-stripe); }
+td code { font-size: 0.81rem; }
+
+/* ============================================================
+   Mobile — collapsible sidebar
+   ============================================================ */
+.sidebar-toggle {
+    display: none; position: fixed; top: 12px; left: 12px; z-index: 200;
+    background: var(--sidebar-bg); color: #c4cdd9;
+    border: 1px solid var(--sidebar-border); border-radius: var(--radius-md);
+    width: 40px; height: 40px; font-size: 1.1rem; cursor: pointer;
+    align-items: center; justify-content: center;
+    box-shadow: 0 2px 8px rgba(0,0,0,0.3);
+}
+.sidebar-overlay { display: none; position: fixed; inset: 0; background: rgba(0,0,0,0.5); z-index: 99; }
+
+@media (max-width: 900px) {
+    .sidebar-toggle { display: flex; }
+    .sidebar {
+        transform: translateX(-100%);
+        transition: transform 0.25s cubic-bezier(0.4,0,0.2,1);
+        width: 290px;
+    }
+    .sidebar.open { transform: translateX(0); box-shadow: 4px 0 28px rgba(0,0,0,0.35); }
+    .sidebar.open + .sidebar-overlay, .sidebar-overlay.active { display: block; }
+    .main { margin-left: 0; padding: 24px 18px 60px; max-width: none; }
+    h1 { font-size: 1.55rem; }
+    h2 { font-size: 1.22rem; }
+    h3 { font-size: 1.05rem; padding-left: 12px; }
+    table { font-size: 0.78rem; }
+    th, td { padding: 7px 10px; }
+    pre code { font-size: 0.76rem; padding: 14px 16px; }
+}
+@media (max-width: 500px) {
+    .main { padding: 18px 12px 40px; }
+    h1 { font-size: 1.35rem; }
+}
+
+/* ============================================================
+   Print
+   ============================================================ */
+@media print {
+    .sidebar, .sidebar-toggle, .sidebar-overlay { display: none !important; }
+    .main { margin-left: 0; padding: 0; max-width: 100%; }
+    body { font-size: 10pt; color: #000; background: #fff; }
+    pre, code { background: #f6f8fa; border: 1px solid #d0d7de; }
+    a { color: #000; }
+    h2, h3 { page-break-after: avoid; }
+    table, pre { page-break-inside: avoid; }
+}
+
+/* ============================================================
+   Animations
+   ============================================================ */
+@keyframes fadeSlideIn {
+    from { opacity: 0; transform: translateY(10px); }
+    to   { opacity: 1; transform: translateY(0); }
+}
+.main h2, .main h3, .main h4 { animation: fadeSlideIn 0.4s ease both; }
+
+/* Skip-link for keyboard users */
+.skip-link {
+    position: absolute; top: -100px; left: 16px;
+    background: var(--sidebar-accent); color: #fff;
+    padding: 10px 18px; z-index: 999; border-radius: var(--radius-sm);
+    font-size: 0.85rem; font-weight: 500;
+}
+.skip-link:focus { top: 16px; outline: 2px solid var(--sidebar-accent); outline-offset: 2px; }
+</style>
+</head>
+<body>
+
+<a href="#main-content" class="skip-link">Skip to content</a>
+
+<!-- Sidebar Toggle (mobile) -->
+<button class="sidebar-toggle" id="sidebarToggle" aria-label="Toggle navigation">
+    &#9776;
+</button>
+
+<!-- Sidebar -->
+<aside class="sidebar" id="sidebar">
+    <div class="sidebar-header">
+        <h2>md2html.py — Markdown → HTML 转换工具</h2>
+        <div class="subtitle">md2html工具说明.md</div>
+    </div>
+    <nav class="sidebar-nav" id="sidebarNav">
+<ul>
+  <li><a href="#概述"><span class="toc-num">1</span> 概述</a></li>
+  <li class="has-children"><a href="#快速开始"><span class="toc-num">2</span> 快速开始</a>
+<ul>
+  <li><a href="#安装依赖"><span class="toc-num">2.1</span> 安装依赖</a></li>
+  <li><a href="#windows"><span class="toc-num">2.2</span> Windows</a></li>
+  <li><a href="#linux-macos"><span class="toc-num">2.3</span> Linux / macOS</a></li>
+</ul>
+</li>
+  <li class="has-children"><a href="#命令行用法"><span class="toc-num">3</span> 命令行用法</a>
+<ul>
+  <li><a href="#模式示例"><span class="toc-num">3.1</span> 模式示例</a></li>
+  <li><a href="#标题与页脚"><span class="toc-num">3.2</span> 标题与页脚</a></li>
+</ul>
+</li>
+  <li><a href="#启动脚本"><span class="toc-num">4</span> 启动脚本</a></li>
+  <li><a href="#依赖"><span class="toc-num">5</span> 依赖</a></li>
+  <li class="has-children"><a href="#生成的-html-特性"><span class="toc-num">6</span> 生成的 HTML 特性</a>
+<ul>
+  <li><a href="#布局与导航"><span class="toc-num">6.1</span> 布局与导航</a></li>
+  <li><a href="#代码块"><span class="toc-num">6.2</span> 代码块</a></li>
+  <li><a href="#表格"><span class="toc-num">6.3</span> 表格</a></li>
+  <li><a href="#明暗主题"><span class="toc-num">6.4</span> 明暗主题</a></li>
+  <li><a href="#打印样式"><span class="toc-num">6.5</span> 打印样式</a></li>
+  <li><a href="#键盘与无障碍"><span class="toc-num">6.6</span> 键盘与无障碍</a></li>
+</ul>
+</li>
+  <li class="has-children"><a href="#技术实现"><span class="toc-num">7</span> 技术实现</a>
+<ul>
+  <li><a href="#处理流程"><span class="toc-num">7.1</span> 处理流程</a></li>
+  <li><a href="#toc-生成策略"><span class="toc-num">7.2</span> TOC 生成策略</a></li>
+  <li><a href="#跨平台兼容"><span class="toc-num">7.3</span> 跨平台兼容</a></li>
+</ul>
+</li>
+  <li><a href="#自定义"><span class="toc-num">8</span> 自定义</a></li>
+  <li><a href="#与其他工具对比"><span class="toc-num">9</span> 与其他工具对比</a></li>
+</ul>
+
+    </nav>
+    <div class="sidebar-footer">
+        Auto-generated from md2html工具说明.md &middot; 2026-08
+    </div>
+</aside>
+<div class="sidebar-overlay" id="sidebarOverlay"></div>
+
+<!-- Main Content -->
+<main class="main" id="main-content">
+<h1>md2html.py — Markdown → HTML 转换工具</h1>
+<h2 id="概述"><span class="sec-num">1</span> 概述</h2>
+<p><code>md2html.py</code> 将 Markdown 文件(默认 <code>README.md</code>)转换为带<strong>侧边栏目录导航</strong>的独立 HTML 文件。</p>
+<ul>
+<li>单文件工具,拷贝即用,无需安装</li>
+<li>生成的 HTML 可离线使用——CSS 和 JavaScript 全部内嵌</li>
+<li>跨平台:Windows / Linux / macOS 均可运行,附 <code>md2html.bat</code> / <code>md2html.sh</code> 启动脚本</li>
+</ul>
+<h2 id="快速开始"><span class="sec-num">2</span> 快速开始</h2>
+<h3 id="安装依赖"><span class="sec-num">2.1</span> 安装依赖</h3>
+<div class="highlight"><pre><span></span><code>pip<span class="w"> </span>install<span class="w"> </span>markdown<span class="w"> </span>pygments
+</code></pre></div>
+
+<p>(Pygments 用于代码高亮;缺 Pygments 时代码块不高亮,但转换仍可正常工作,建议安装。)</p>
+<blockquote>
+<p><strong>注意:</strong> <code>md2html.bat</code> 优先使用 <code>py -3</code> 启动器。若 <code>py -3</code> 与 <code>python</code> 指向不同的解释器,请确认 <code>py -3</code> 对应的 Python 也已安装依赖,否则会报 <code>ModuleNotFoundError: No module named 'markdown'</code>。</p>
+</blockquote>
+<h3 id="windows"><span class="sec-num">2.2</span> Windows</h3>
+<div class="highlight"><pre><span></span><code><span class="p">:</span><span class="c1">: 双击或命令行运行(自动查找 Python)</span>
+md2html.bat
+
+<span class="p">:</span><span class="c1">: 等价于</span>
+python md2html.py
+
+<span class="p">:</span><span class="c1">: 转换任意文件</span>
+md2html.bat 文档.md -o 输出\文档.html
+</code></pre></div>
+
+<blockquote>
+<p>若提示「'md2html.bat' 不是内部或外部命令」,请改用 <code>.\md2html.bat</code> 调用(系统开启了 <code>NoDefaultCurrentDirectoryInExePath</code> 策略时,cmd 不在当前目录查找程序)。</p>
+</blockquote>
+<h3 id="linux-macos"><span class="sec-num">2.3</span> Linux / macOS</h3>
+<div class="highlight"><pre><span></span><code>chmod<span class="w"> </span>+x<span class="w"> </span>md2html.sh
+./md2html.sh<span class="w">                            </span><span class="c1"># 转换当前目录 README.md</span>
+./md2html.sh<span class="w"> </span>文档.md<span class="w"> </span>-o<span class="w"> </span>/tmp/out.html<span class="w">   </span><span class="c1"># 转换任意文件</span>
+</code></pre></div>
+
+<p>或直接用 Python:</p>
+<div class="highlight"><pre><span></span><code>python3<span class="w"> </span>md2html.py<span class="w"> </span>文档.md
+</code></pre></div>
+
+<h2 id="命令行用法"><span class="sec-num">3</span> 命令行用法</h2>
+<div class="highlight"><pre><span></span><code><span class="k">usage</span><span class="err">:</span><span class="w"> </span><span class="n">md2html</span><span class="w"> </span><span class="o">[</span><span class="n">-h</span><span class="o">]</span><span class="w"> </span><span class="o">[</span><span class="n">-o OUTPUT</span><span class="o">]</span><span class="w"> </span><span class="o">[</span><span class="n">--title TITLE</span><span class="o">]</span><span class="w"> </span><span class="o">[</span><span class="n">input</span><span class="o">]</span>
+
+<span class="n">positional</span><span class="w"> </span><span class="nl">arguments</span><span class="p">:</span>
+<span class="w">  </span><span class="k">input</span><span class="w">                </span><span class="n">输入的</span><span class="w"> </span><span class="p">.</span><span class="n">md</span><span class="w"> </span><span class="n">文件或包含</span><span class="w"> </span><span class="n">README</span><span class="p">.</span><span class="n">md</span><span class="w"> </span><span class="n">的目录</span>
+<span class="w">                       </span><span class="p">(</span><span class="nl">默认</span><span class="p">:</span><span class="n">当前目录的</span><span class="w"> </span><span class="n">README</span><span class="p">.</span><span class="n">md</span><span class="p">)</span>
+
+<span class="nl">options</span><span class="p">:</span>
+<span class="w">  </span><span class="o">-</span><span class="n">o</span><span class="p">,</span><span class="w"> </span><span class="c1">--output OUTPUT  输出 HTML 文件路径</span>
+<span class="w">                       </span><span class="p">(</span><span class="nl">默认</span><span class="p">:</span><span class="n">与输入同名</span><span class="w"> </span><span class="p">.</span><span class="n">html</span><span class="p">;</span><span class="n">目录模式为</span><span class="w"> </span><span class="n">README</span><span class="p">.</span><span class="n">html</span><span class="p">)</span>
+<span class="w">  </span><span class="c1">--title TITLE        手动指定 HTML 标题</span>
+<span class="w">                       </span><span class="p">(</span><span class="nl">默认</span><span class="p">:</span><span class="n">文档第一个</span><span class="w"> </span><span class="n">h1</span><span class="p">,</span><span class="n">无</span><span class="w"> </span><span class="n">h1</span><span class="w"> </span><span class="n">时为输入文件名</span><span class="p">)</span>
+</code></pre></div>
+
+<h3 id="模式示例"><span class="sec-num">3.1</span> 模式示例</h3>
+<table>
+<thead>
+<tr>
+<th>命令</th>
+<th>输入</th>
+<th>输出</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td><code>md2html.py</code></td>
+<td><code>./README.md</code></td>
+<td><code>./README.html</code></td>
+</tr>
+<tr>
+<td><code>md2html.py docs/</code></td>
+<td><code>docs/README.md</code></td>
+<td><code>docs/README.html</code></td>
+</tr>
+<tr>
+<td><code>md2html.py guide.md</code></td>
+<td><code>guide.md</code></td>
+<td><code>guide.html</code></td>
+</tr>
+<tr>
+<td><code>md2html.py guide.md -o out/guide.html</code></td>
+<td><code>guide.md</code></td>
+<td><code>out/guide.html</code>(自动建目录)</td>
+</tr>
+<tr>
+<td><code>md2html.py --title "使用指南" guide.md</code></td>
+<td><code>guide.md</code></td>
+<td><code>guide.html</code>,标题为「使用指南」</td>
+</tr>
+</tbody>
+</table>
+<h3 id="标题与页脚"><span class="sec-num">3.2</span> 标题与页脚</h3>
+<ul>
+<li>HTML 标题来源:<code>--title</code> 参数 &gt; 文档第一个 <code>#</code> 标题 &gt; 输入文件名(不含扩展名)</li>
+<li>侧边栏副标题:输入文件名</li>
+<li>页脚:源文件名 + 生成日期(自动取当天,格式 <code>YYYY-MM</code>)</li>
+</ul>
+<h2 id="启动脚本"><span class="sec-num">4</span> 启动脚本</h2>
+<table>
+<thead>
+<tr>
+<th>脚本</th>
+<th>平台</th>
+<th>解释器探测顺序</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td><code>md2html.bat</code></td>
+<td>Windows</td>
+<td><code>py -3</code> → <code>python</code> → <code>python3</code></td>
+</tr>
+<tr>
+<td><code>md2html.sh</code></td>
+<td>Linux / macOS</td>
+<td><code>python3</code> → <code>python</code></td>
+</tr>
+</tbody>
+</table>
+<ul>
+<li>两个脚本都通过<strong>自身所在目录</strong>定位 <code>md2html.py</code>,可在任意工作目录调用(不依赖调用时的当前目录)</li>
+<li>所有命令行参数原样透传,退出码原样传递(输入缺失、输出为目录等错误统一返回 1,便于脚本集成)</li>
+<li>找不到 Python 时输出错误提示并以退出码 1 结束</li>
+<li>实测说明:简体中文系统(GBK 代码页)的 cmd 下,中文文件名可正常使用;其他代码页建议改用 sh 或完整路径调用</li>
+</ul>
+<h2 id="依赖"><span class="sec-num">5</span> 依赖</h2>
+<table>
+<thead>
+<tr>
+<th>依赖</th>
+<th>安装</th>
+<th>说明</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>Python</td>
+<td>3.8+</td>
+<td>Windows:python.org 安装并勾选 "Add to PATH"</td>
+</tr>
+<tr>
+<td>markdown</td>
+<td><code>pip install markdown</code></td>
+<td>Markdown 解析</td>
+</tr>
+<tr>
+<td>Pygments</td>
+<td><code>pip install pygments</code></td>
+<td>代码高亮(推荐安装)</td>
+</tr>
+</tbody>
+</table>
+<h2 id="生成的-html-特性"><span class="sec-num">6</span> 生成的 HTML 特性</h2>
+<h3 id="布局与导航"><span class="sec-num">6.1</span> 布局与导航</h3>
+<div class="highlight"><pre><span></span><code>┌──────────────────┬──────────────────────────────────────────┐
+│   侧边栏导航      │          主内容区                          │
+│   (300px fixed)  │          (max 1240px)                    │
+│                  │                                          │
+│  ┌────────────┐  │  h1 标题                                 │
+│  │ 快速开始    │  │  ───────────────                         │
+│  │ 目录结构    │  │  正文内容...                              │
+│  │ ▸核心架构   │  │                                          │
+│  │  YAML定义   │  │  ```code blocks```                      │
+│  │  对象       │  │                                          │
+│  │  属性       │  │  | tables | with | data |               │
+│  │  ▸容器系统  │  │                                          │
+│  │  ...       │  │  ## h2 章节                               │
+│  └────────────┘  │  ### h3 小节                             │
+│                  │                                          │
+└──────────────────┴──────────────────────────────────────────┘
+</code></pre></div>
+
+<p><strong>侧边栏行为:</strong><br />
+- <strong>固定定位</strong>:滚动主内容时始终可见<br />
+- <strong>自动高亮</strong>:随页面滚动,当前阅读位置对应的导航项自动高亮(蓝色左边框)<br />
+- <strong>自动滚动</strong>:高亮项超出可视区时自动滚入视野<br />
+- <strong>平滑跳转</strong>:点击导航项 → 平滑滚动到对应章节<br />
+- <strong>层级缩进</strong>:h2(粗体)/ h3(缩进)/ h4(更深缩进)三级结构<br />
+- <strong>移动端适配</strong>:≤900px 宽度时侧边栏自动折叠,左上角出现汉堡菜单按钮</p>
+<h3 id="代码块"><span class="sec-num">6.2</span> 代码块</h3>
+<ul>
+<li>使用 <strong>Pygments</strong> 进行语法高亮</li>
+<li>自动检测语言(bash / yaml / c / python / jinja2 等)</li>
+<li>支持明暗双主题(跟随系统 <code>prefers-color-scheme</code>)</li>
+<li>横向溢出时出现滚动条,不会撑破布局</li>
+</ul>
+<h3 id="表格"><span class="sec-num">6.3</span> 表格</h3>
+<ul>
+<li>全宽显示,带交替行条纹</li>
+<li>表头固定大写风格</li>
+<li>圆角边框,打印时避免跨页断裂</li>
+</ul>
+<h3 id="明暗主题"><span class="sec-num">6.4</span> 明暗主题</h3>
+<p>CSS 使用 <code>prefers-color-scheme: dark</code> 媒体查询自动切换:</p>
+<table>
+<thead>
+<tr>
+<th>元素</th>
+<th>Light</th>
+<th>Dark</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>背景</td>
+<td><code>#ffffff</code></td>
+<td><code>#0d1117</code></td>
+</tr>
+<tr>
+<td>正文</td>
+<td><code>#1f2328</code></td>
+<td><code>#c9d1d9</code></td>
+</tr>
+<tr>
+<td>代码背景</td>
+<td><code>#f6f8fa</code></td>
+<td><code>#161b22</code></td>
+</tr>
+<tr>
+<td>内联代码</td>
+<td><code>#bf1a2f</code></td>
+<td><code>#ff7b72</code></td>
+</tr>
+<tr>
+<td>侧边栏</td>
+<td><code>#111318</code>(始终深色)</td>
+<td>同左</td>
+</tr>
+</tbody>
+</table>
+<h3 id="打印样式"><span class="sec-num">6.5</span> 打印样式</h3>
+<p><code>@media print</code> 下自动:<br />
+- 隐藏侧边栏和导航按钮<br />
+- 主内容全宽,黑色文字白色背景<br />
+- 表格和代码块避免跨页断裂<br />
+- 标题避免孤行</p>
+<h3 id="键盘与无障碍"><span class="sec-num">6.6</span> 键盘与无障碍</h3>
+<table>
+<thead>
+<tr>
+<th>操作</th>
+<th>效果</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td><code>Ctrl+\</code></td>
+<td>切换移动端侧边栏(桌面端侧边栏常驻显示,无可见效果)</td>
+</tr>
+<tr>
+<td><code>Tab</code> → <code>Enter</code></td>
+<td>跳过导航链接直接访问主内容</td>
+</tr>
+<tr>
+<td>移动端点击遮罩</td>
+<td>关闭侧边栏</td>
+</tr>
+<tr>
+<td>点击导航链接后</td>
+<td>移动端自动关闭侧边栏</td>
+</tr>
+</tbody>
+</table>
+<h2 id="技术实现"><span class="sec-num">7</span> 技术实现</h2>
+<h3 id="处理流程"><span class="sec-num">7.1</span> 处理流程</h3>
+<div class="highlight"><pre><span></span><code><span class="s s-Atom">输入</span> <span class="p">.</span><span class="s s-Atom">md</span> <span class="nf">文件</span><span class="p">(</span><span class="s s-Atom">默认</span> <span class="nv">README</span><span class="p">.</span><span class="s s-Atom">md</span><span class="p">)</span>
+    <span class="s s-Atom">│</span>
+    <span class="s s-Atom">▼</span> <span class="nf">标题提取</span><span class="o">:--</span><span class="s s-Atom">title</span> <span class="o">&gt;</span> <span class="s s-Atom">第一个</span> <span class="s s-Atom">h1</span> <span class="o">&gt;</span> <span class="s s-Atom">文件名</span>
+    <span class="s s-Atom">▼</span> <span class="nv">Python</span> <span class="s s-Atom">markdown</span> <span class="s s-Atom">库</span> <span class="o">+</span> <span class="s s-Atom">extensions</span>
+    <span class="s s-Atom">│</span>  <span class="s s-Atom">├─</span> <span class="s s-Atom">fenced_code</span>  <span class="s s-Atom">→</span> <span class="s s-Atom">围栏代码块</span>
+    <span class="s s-Atom">│</span>  <span class="s s-Atom">├─</span> <span class="s s-Atom">tables</span>       <span class="s s-Atom">→</span> <span class="nv">GFM</span> <span class="s s-Atom">表格</span>
+    <span class="s s-Atom">│</span>  <span class="s s-Atom">├─</span> <span class="s s-Atom">codehilite</span>   <span class="s s-Atom">→</span> <span class="nv">Pygments</span> <span class="s s-Atom">语法高亮</span>
+    <span class="s s-Atom">│</span>  <span class="s s-Atom">├─</span> <span class="s s-Atom">nl2br</span>        <span class="s s-Atom">→</span> <span class="s s-Atom">单换行转</span> <span class="o">&lt;</span><span class="s s-Atom">br</span><span class="o">&gt;</span>
+    <span class="s s-Atom">│</span>  <span class="s s-Atom">└─</span> <span class="s s-Atom">sane_lists</span>   <span class="s s-Atom">→</span> <span class="s s-Atom">合理列表嵌套</span>
+    <span class="s s-Atom">│</span>
+    <span class="s s-Atom">▼</span> <span class="s s-Atom">后处理</span>
+    <span class="s s-Atom">│</span>  <span class="s s-Atom">├─</span> <span class="s s-Atom">移除静态</span> <span class="nv">TOC</span><span class="p">(</span><span class="s s-Atom">替换为侧边栏导航</span><span class="p">)</span>
+    <span class="s s-Atom">│</span>  <span class="s s-Atom">└─</span> <span class="s s-Atom">注入</span> <span class="s s-Atom">h2</span><span class="o">/</span><span class="s s-Atom">h3</span><span class="o">/</span><span class="s s-Atom">h4</span> <span class="s s-Atom">的</span> <span class="s s-Atom">id</span> <span class="s s-Atom">与章节编号</span>
+    <span class="s s-Atom">│</span>
+    <span class="s s-Atom">▼</span> <span class="s s-Atom">注入</span> <span class="nv">HTML</span> <span class="s s-Atom">模板</span>
+    <span class="s s-Atom">│</span>  <span class="s s-Atom">├─</span> <span class="nv">CSS</span> <span class="p">(</span><span class="o">~</span><span class="mi">450</span> <span class="s s-Atom">行内嵌</span><span class="p">)</span>
+    <span class="s s-Atom">│</span>  <span class="s s-Atom">├─</span> <span class="nv">JS</span>  <span class="p">(</span><span class="s s-Atom">侧边栏交互逻辑</span><span class="p">)</span>
+    <span class="s s-Atom">│</span>  <span class="s s-Atom">├─</span> <span class="nv">TOC</span> <span class="p">(</span><span class="s s-Atom">从</span> <span class="s s-Atom">markdown</span> <span class="s s-Atom">heading</span> <span class="s s-Atom">提取的层级导航</span><span class="p">)</span>
+    <span class="s s-Atom">│</span>  <span class="s s-Atom">└─</span> <span class="s s-Atom">动态内容</span><span class="o">:</span><span class="s s-Atom">标题</span> <span class="o">/</span> <span class="s s-Atom">源文件名</span> <span class="o">/</span> <span class="nf">生成日期</span><span class="p">(</span><span class="nv">YYYY</span><span class="o">-</span><span class="nv">MM</span><span class="p">)</span>
+    <span class="s s-Atom">│</span>
+    <span class="s s-Atom">▼</span>
+<span class="s s-Atom">输出</span> <span class="p">.</span><span class="nf">html</span> <span class="p">(</span><span class="s s-Atom">独立离线可用</span><span class="p">)</span>
+</code></pre></div>
+
+<h3 id="toc-生成策略"><span class="sec-num">7.2</span> TOC 生成策略</h3>
+<p>不从 Markdown 的 <code>[TOC]</code> 扩展生成,而是<strong>直接从 <code>#</code> heading 行正则提取</strong>:</p>
+<div class="highlight"><pre><span></span><code><span class="c1"># 正则匹配 h2/h3/h4 heading</span>
+<span class="n">m</span> <span class="o">=</span> <span class="n">re</span><span class="o">.</span><span class="n">match</span><span class="p">(</span><span class="sa">r</span><span class="s1">&#39;^(#{2,4})\s+(.+)$&#39;</span><span class="p">,</span> <span class="n">line</span><span class="p">)</span>
+
+<span class="c1"># 构建嵌套树结构:按 heading 层级确定父子关系</span>
+<span class="c1"># h2 → depth=0 (根节点)</span>
+<span class="c1"># h3 → depth=1 (挂在最近的 h2 下)</span>
+<span class="c1"># h4 → depth=2 (挂在最近的 h3 下)</span>
+</code></pre></div>
+
+<p>这样生成的 TOC 结构与 markdown toc 扩展一致(仅取 h2–h4),且更可控(可排除特定章节、调整深度等)。</p>
+<h3 id="跨平台兼容"><span class="sec-num">7.3</span> 跨平台兼容</h3>
+<ul>
+<li>路径处理统一使用 <code>pathlib</code> 并做 <code>.resolve()</code> 规范化,Windows <code>\</code> 与 Linux <code>/</code> 自动适配</li>
+<li>读写均显式 <code>encoding='utf-8'</code>(输出无 BOM、<code>\n</code> 换行,浏览器兼容性最好)</li>
+<li>启动时对 stdout/stderr 做 UTF-8 reconfigure,避免 Windows GBK 控制台打印中文乱码</li>
+<li>启动脚本自动探测解释器:<code>md2html.bat</code> 依次尝试 <code>py -3</code> / <code>python</code> / <code>python3</code>;<code>md2html.sh</code> 依次尝试 <code>python3</code> / <code>python</code></li>
+</ul>
+<h2 id="自定义"><span class="sec-num">8</span> 自定义</h2>
+<p>如需修改样式或行为,编辑 <code>md2html.py</code>:</p>
+<table>
+<thead>
+<tr>
+<th>修改目标</th>
+<th>位置</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>HTML 标题来源</td>
+<td><code>--title</code> 参数 / <code>extract_first_h1()</code> 函数</td>
+</tr>
+<tr>
+<td>页脚日期格式</td>
+<td><code>convert()</code> 中的 <code>footer_date</code>(<code>%Y-%m</code>)</td>
+</tr>
+<tr>
+<td>侧边栏宽度</td>
+<td>CSS 变量 <code>--sidebar-width</code></td>
+</tr>
+<tr>
+<td>主内容最大宽度</td>
+<td><code>.main</code> 的 <code>max-width</code></td>
+</tr>
+<tr>
+<td>明暗主题色</td>
+<td><code>@media (prefers-color-scheme: dark)</code> 块</td>
+</tr>
+<tr>
+<td>代码高亮颜色</td>
+<td><code>.highlight</code> 选择器块</td>
+</tr>
+<tr>
+<td>移动端断点</td>
+<td><code>@media (max-width: 900px)</code></td>
+</tr>
+<tr>
+<td>打印样式</td>
+<td><code>@media print</code> 块</td>
+</tr>
+</tbody>
+</table>
+<h2 id="与其他工具对比"><span class="sec-num">9</span> 与其他工具对比</h2>
+<table>
+<thead>
+<tr>
+<th>工具</th>
+<th>输出</th>
+<th>导航</th>
+<th>代码高亮</th>
+<th>离线</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>md2html.py</td>
+<td>单 HTML 文件</td>
+<td>侧边栏 TOC + 滚动追踪</td>
+<td>Pygments</td>
+<td>✅</td>
+</tr>
+<tr>
+<td>grip</td>
+<td>GitHub 预览</td>
+<td>无</td>
+<td>GitHub 风格</td>
+<td>❌ (需网络)</td>
+</tr>
+<tr>
+<td>markdown-pdf</td>
+<td>PDF</td>
+<td>无</td>
+<td>有</td>
+<td>✅</td>
+</tr>
+<tr>
+<td>docsify</td>
+<td>SPA 站点</td>
+<td>侧边栏</td>
+<td>Prism.js</td>
+<td>✅ (需本地服务)</td>
+</tr>
+<tr>
+<td>mdbook</td>
+<td>静态站点</td>
+<td>侧边栏 + 搜索</td>
+<td>有</td>
+<td>✅</td>
+</tr>
+</tbody>
+</table>
+</main>
+
+<script>
+(function() {
+    // =========================================
+    // Mobile sidebar toggle
+    // =========================================
+    var sidebar = document.getElementById('sidebar');
+    var toggleBtn = document.getElementById('sidebarToggle');
+    var overlay = document.getElementById('sidebarOverlay');
+
+    function openSidebar() {
+        sidebar.classList.add('open');
+        overlay.classList.add('active');
+        document.body.style.overflow = 'hidden';
+    }
+
+    function closeSidebar() {
+        sidebar.classList.remove('open');
+        overlay.classList.remove('active');
+        document.body.style.overflow = '';
+    }
+
+    toggleBtn.addEventListener('click', function() {
+        sidebar.classList.contains('open') ? closeSidebar() : openSidebar();
+    });
+
+    overlay.addEventListener('click', closeSidebar);
+
+    // =========================================
+    // Active link highlighting on scroll
+    // =========================================
+    var navLinks = [].slice.call(document.querySelectorAll('.sidebar-nav a'));
+    var headings = [].slice.call(document.querySelectorAll('.main h2, .main h3, .main h4'));
+
+    if (navLinks.length && headings.length) {
+        // Build a map: heading id -> nav link element
+        var linkMap = {};
+        navLinks.forEach(function(a) {
+            var href = a.getAttribute('href');
+            if (href && href.startsWith('#')) {
+                linkMap[href.substring(1)] = a;
+            }
+        });
+
+        // Collect heading positions
+        function getHeadingPositions() {
+            return headings.map(function(h) {
+                return { id: h.id, top: h.getBoundingClientRect().top + window.pageYOffset - 80 };
+            });
+        }
+
+        var headingPositions = getHeadingPositions();
+
+        function updateActive() {
+            var scrollY = window.pageYOffset;
+            var activeId = null;
+
+            for (var i = headingPositions.length - 1; i >= 0; i--) {
+                if (scrollY >= headingPositions[i].top) {
+                    activeId = headingPositions[i].id;
+                    break;
+                }
+            }
+
+            // Clear all
+            navLinks.forEach(function(a) { a.classList.remove('active'); });
+
+            // Set active
+            if (activeId && linkMap[activeId]) {
+                linkMap[activeId].classList.add('active');
+
+                // Ensure parent is visible (scroll into view in sidebar)
+                var el = linkMap[activeId];
+                var sidebarNav = document.getElementById('sidebarNav');
+                var elRect = el.getBoundingClientRect();
+                var navRect = sidebarNav.getBoundingClientRect();
+                if (elRect.bottom > navRect.bottom || elRect.top < navRect.top) {
+                    el.scrollIntoView({ block: 'center', behavior: 'smooth' });
+                }
+            }
+        }
+
+        window.addEventListener('scroll', updateActive, { passive: true });
+
+        // Recalculate on resize
+        var resizeTimer;
+        window.addEventListener('resize', function() {
+            clearTimeout(resizeTimer);
+            resizeTimer = setTimeout(function() {
+                headingPositions = getHeadingPositions();
+                updateActive();
+            }, 200);
+        }, { passive: true });
+
+        // Initial state
+        updateActive();
+    }
+
+    // =========================================
+    // Smooth scroll for sidebar links
+    // =========================================
+    document.getElementById('sidebarNav').addEventListener('click', function(e) {
+        var target = e.target;
+        if (target.tagName === 'A' && target.getAttribute('href').startsWith('#')) {
+            e.preventDefault();
+            var id = target.getAttribute('href').substring(1);
+            var el = document.getElementById(id);
+            if (el) {
+                el.scrollIntoView({ behavior: 'smooth', block: 'start' });
+                // Close sidebar on mobile after click
+                if (window.innerWidth <= 900) {
+                    closeSidebar();
+                }
+            }
+        }
+    });
+
+    // =========================================
+    // Keyboard shortcut: Ctrl+\ to toggle sidebar
+    // =========================================
+    document.addEventListener('keydown', function(e) {
+        if (e.ctrlKey && e.key === '\\') {
+            e.preventDefault();
+            sidebar.classList.contains('open') ? closeSidebar() : openSidebar();
+        }
+    });
+})();
+</script>
+
+</body>
+</html>

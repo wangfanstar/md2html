@@ -502,7 +502,7 @@ td code { font-size: 0.81rem; }
 <p><strong>注意:</strong> <code>md2html.bat</code> 优先使用 <code>py -3</code> 启动器。若 <code>py -3</code> 与 <code>python</code> 指向不同的解释器,请确认 <code>py -3</code> 对应的 Python 也已安装依赖,否则会报 <code>ModuleNotFoundError: No module named 'markdown'</code>。</p>
 </blockquote>
 <h3 id="windows"><span class="sec-num">2.2</span> Windows</h3>
-<div class="highlight"><pre><span></span><code><span class="p">:</span><span class="c1">: 双击或命令行运行(自动查找 Python)</span>
+<div class="highlight"><pre><span></span><code><span class="p">:</span><span class="c1">: 无参数(或双击):批量转换本目录所有 .md(不含子目录)</span>
 md2html.bat
 
 <span class="p">:</span><span class="c1">: 等价于</span>
@@ -514,7 +514,7 @@ md2html.bat 文档.md -o 输出\文档.html
 
 <blockquote>
 <p>若提示「'md2html.bat' 不是内部或外部命令」,请改用 <code>.\md2html.bat</code> 调用(系统开启了 <code>NoDefaultCurrentDirectoryInExePath</code> 策略时,cmd 不在当前目录查找程序)。</p>
-<p><strong>双击运行:</strong> 直接双击 <code>md2html.bat</code> 会转换其所在目录的 <code>README.md</code>,结束后窗口停留显示结果(按任意键关闭);目录中没有 <code>README.md</code> 时,窗口显示错误与用法提示后等待按键。命令行/脚本方式调用(如 <code>md2html.bat 文档.md</code>)不会停留,可直接用于管道或自动化。</p>
+<p><strong>双击运行:</strong> 双击 <code>md2html.bat</code>(或无参数运行)会批量转换其所在目录的<strong>所有 <code>.md</code> 文件</strong>(不包括子文件夹),逐个输出结果并汇总数量,结束后窗口停留(按任意键关闭);目录中没有 <code>.md</code> 时显示错误提示。命令行带参数调用(如 <code>md2html.bat 文档.md</code>)只转换指定文件,不停留,可直接用于管道或自动化。</p>
 </blockquote>
 <h3 id="linux-macos"><span class="sec-num">2.3</span> Linux / macOS</h3>
 <div class="highlight"><pre><span></span><code>chmod<span class="w"> </span>+x<span class="w"> </span>md2html.sh
@@ -608,6 +608,7 @@ md2html.bat 文档.md -o 输出\文档.html
 <ul>
 <li>两个脚本都通过<strong>自身所在目录</strong>定位 <code>md2html.py</code>,可在任意工作目录调用(不依赖调用时的当前目录)</li>
 <li>所有命令行参数原样透传,退出码原样传递(输入缺失、输出为目录等错误统一返回 1,便于脚本集成)</li>
+<li>无参数运行(含双击)会批量转换脚本所在目录的所有 <code>.md</code> 文件(不含子目录);带参数则原样透传给 <code>md2html.py</code></li>
 <li>双击 <code>md2html.bat</code> 时窗口会停留到按键(便于查看结果);命令行调用无停留,退出码直接返回</li>
 <li>找不到 Python 时输出错误提示并以退出码 1 结束</li>
 <li>实测说明:简体中文系统(GBK 代码页)的 cmd 下,中文文件名可正常使用;其他代码页建议改用 sh 或完整路径调用</li>

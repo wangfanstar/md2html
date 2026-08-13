@@ -23,7 +23,7 @@ pip install markdown pygments
 ### Windows
 
 ```bat
-:: 无参数(或双击):批量转换本目录所有 .md(不含子目录)
+:: 无参数(或双击):批量转换当前目录所有 .md(不含子目录)
 md2html.bat
 
 :: 等价于
@@ -35,13 +35,13 @@ md2html.bat 文档.md -o 输出\文档.html
 
 > 若提示「'md2html.bat' 不是内部或外部命令」,请改用 `.\md2html.bat` 调用(系统开启了 `NoDefaultCurrentDirectoryInExePath` 策略时,cmd 不在当前目录查找程序)。
 
-> **双击运行:** 双击 `md2html.bat`(或无参数运行)会批量转换其所在目录的**所有 `.md` 文件**(不包括子文件夹),逐个输出结果并汇总数量,结束后窗口停留(按任意键关闭);目录中没有 `.md` 时显示错误提示。命令行带参数调用(如 `md2html.bat 文档.md`)只转换指定文件,不停留,可直接用于管道或自动化。
+> **双击运行:** 双击 `md2html.bat`(或无参数运行)会批量转换**当前目录**的**所有 `.md` 文件**(不包括子文件夹;双击时当前目录即脚本所在目录),逐个输出结果并汇总数量,结束后窗口停留(按任意键关闭);目录中没有 `.md` 时显示错误提示。命令行带参数调用(如 `md2html.bat 文档.md`)只转换指定文件,不停留,可直接用于管道或自动化。
 
 ### Linux / macOS
 
 ```bash
 chmod +x md2html.sh
-./md2html.sh                            # 转换当前目录 README.md
+./md2html.sh                            # 批量转换当前目录所有 .md(不含子目录)
 ./md2html.sh 文档.md -o /tmp/out.html   # 转换任意文件
 ```
 
@@ -58,7 +58,7 @@ usage: md2html [-h] [-o OUTPUT] [--title TITLE] [-r] [input]
 
 positional arguments:
   input                输入的 .md 文件或包含 README.md 的目录
-                       (默认:当前目录的 README.md)
+                       (默认:当前目录下所有 .md 文件,不含子目录)
 
 options:
   -o, --output OUTPUT  输出 HTML 文件路径
@@ -73,7 +73,7 @@ options:
 
 | 命令 | 输入 | 输出 |
 |------|------|------|
-| `md2html.py` | `./README.md` | `./README.html` |
+| `md2html.py` | 当前目录所有 `.md`(不含子目录) | 各源文件同名 `.html` |
 | `md2html.py docs/` | `docs/README.md` | `docs/README.html` |
 | `md2html.py guide.md` | `guide.md` | `guide.html` |
 | `md2html.py guide.md -o out/guide.html` | `guide.md` | `out/guide.html`(自动建目录) |
@@ -85,6 +85,15 @@ options:
 - HTML 标题来源:`--title` 参数 > 文档第一个 `#` 标题 > 输入文件名(不含扩展名)
 - 侧边栏副标题:输入文件名
 - 页脚:源文件名 + 生成日期(自动取当天,格式 `YYYY-MM`)
+
+### 批量模式(无参数)
+
+不带 `input` 参数运行(如 `md2html.py`、双击 `md2html.bat`、`./md2html.sh`)会批量转换**当前目录**下所有 `.md` 文件(不包括子文件夹):
+
+- 输出与源文件同名的 `.html`;自动跳过隐藏文件与隐藏目录
+- 不能与 `-o/--output`、`--title` 同时使用(会报错并以退出码 1 结束)
+- 配合 `-r` 则递归包含子文件夹:`md2html.py -r`
+- 目录中没有 `.md` 文件时报错并以退出码 1 结束;单个文件失败不影响其余,最后汇总数量
 
 ### 递归模式(-r)
 
@@ -105,7 +114,7 @@ options:
 
 - 两个脚本都通过**自身所在目录**定位 `md2html.py`,可在任意工作目录调用(不依赖调用时的当前目录)
 - 所有命令行参数原样透传,退出码原样传递(输入缺失、输出为目录等错误统一返回 1,便于脚本集成)
-- 无参数运行(含双击)会批量转换脚本所在目录的所有 `.md` 文件(不含子目录);带参数则原样透传给 `md2html.py`(含 `-r` 递归模式)
+- 无参数运行(含双击)会批量转换**当前目录**的所有 `.md` 文件(不含子目录;双击时当前目录即脚本所在目录);带参数则原样透传给 `md2html.py`(含 `-r` 递归模式)
 - 双击 `md2html.bat` 时窗口会停留到按键(便于查看结果);命令行调用无停留,退出码直接返回
 - 找不到 Python 时输出错误提示并以退出码 1 结束
 - 实测说明:简体中文系统(GBK 代码页)的 cmd 下,中文文件名可正常使用;其他代码页建议改用 sh 或完整路径调用

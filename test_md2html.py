@@ -36,19 +36,6 @@ class TestResolvePaths(unittest.TestCase):
         defaults.update(kw)
         return SimpleNamespace(**defaults)
 
-    def test_no_args_readme_in_cwd(self):
-        with tempfile.TemporaryDirectory() as tmp:
-            cwd = Path(tmp)
-            (cwd / 'README.md').write_text('# T', encoding='utf-8')
-            inp, out, title = md2html.resolve_paths(self._args(), cwd=cwd)
-            self.assertEqual(inp, cwd / 'README.md')
-            self.assertEqual(out, cwd / 'README.html')
-            self.assertIsNone(title)
-
-    def test_no_args_missing_readme_returns_none(self):
-        with tempfile.TemporaryDirectory() as tmp:
-            self.assertIsNone(md2html.resolve_paths(self._args(), cwd=Path(tmp)))
-
     def test_dir_mode(self):
         with tempfile.TemporaryDirectory() as tmp:
             cwd = Path(tmp)
@@ -181,6 +168,77 @@ class TestRecursive(unittest.TestCase):
     def test_recursive_empty_dir_errors(self):
         with tempfile.TemporaryDirectory() as tmp:
             self.assertEqual(md2html.main(['-r', tmp]), 1)
+
+
+class TestBatch(unittest.TestCase):
+    def _chdir_tmp(self):
+        tmp = tempfile.TemporaryDirectory()
+        old = os.getcwd()
+        os.chdir(tmp.name)
+        return tmp, old
+
+    def test_no_args_batches_cwd_top_level_only(self):
+        tmp, old = self._chdir_tmp()
+        try:
+            Path('a.md').write_text('# A', encoding='utf-8')
+            Path('b.md').write_text('# B', encoding='utf-8')
+            Path('sub').mkdir()
+            Path('sub', 'c.md').write_text('# C', encoding='utf-8')
+            self.assertEqual(md2html.main([]), 0)
+            self.assertTrue(Path('a.html').exists())
+            self.assertTrue(Path('b.html').exists())
+            self.assertFalse(Path('sub', 'c.html').exists())
+        finally:
+            os.chdir(old)
+            tmp.cleanup()
+
+    def test_no_args_skips_hidden_files(self):
+        tmp, old = self._chdir_tmp()
+        try:
+            Path('a.md').write_text('# A', encoding='utf-8')
+            Path('.hidden.md').write_text('# H', encoding='utf-8')
+            md2html.main([])
+            self.assertFalse(Path('.hidden.html').exists())
+        finally:
+            os.chdir(old)
+            tmp.cleanup()
+
+    def test_no_args_empty_dir_errors(self):
+        tmp, old = self._chdir_tmp()
+        try:
+            self.assertEqual(md2html.main([]), 1)
+        finally:
+            os.chdir(old)
+            tmp.cleanup()
+
+    def test_no_args_with_output_errors(self):
+        tmp, old = self._chdir_tmp()
+        try:
+            Path('a.md').write_text('# A', encoding='utf-8')
+            self.assertEqual(md2html.main(['-o', 'x.html']), 1)
+        finally:
+            os.chdir(old)
+            tmp.cleanup()
+
+    def test_no_args_with_title_errors(self):
+        tmp, old = self._chdir_tmp()
+        try:
+            Path('a.md').write_text('# A', encoding='utf-8')
+            self.assertEqual(md2html.main(['--title', 'T']), 1)
+        finally:
+            os.chdir(old)
+            tmp.cleanup()
+
+    def test_no_args_recursive_includes_subdirs(self):
+        tmp, old = self._chdir_tmp()
+        try:
+            Path('sub').mkdir()
+            Path('sub', 'c.md').write_text('# C', encoding='utf-8')
+            self.assertEqual(md2html.main(['-r']), 0)
+            self.assertTrue(Path('sub', 'c.html').exists())
+        finally:
+            os.chdir(old)
+            tmp.cleanup()
 
 
 class TestMain(unittest.TestCase):

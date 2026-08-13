@@ -450,7 +450,8 @@ td code { font-size: 0.81rem; }
 <ul>
   <li><a href="#模式示例"><span class="toc-num">3.1</span> 模式示例</a></li>
   <li><a href="#标题与页脚"><span class="toc-num">3.2</span> 标题与页脚</a></li>
-  <li><a href="#递归模式-r"><span class="toc-num">3.3</span> 递归模式(-r)</a></li>
+  <li><a href="#批量模式无参数"><span class="toc-num">3.3</span> 批量模式(无参数)</a></li>
+  <li><a href="#递归模式-r"><span class="toc-num">3.4</span> 递归模式(-r)</a></li>
 </ul>
 </li>
   <li><a href="#启动脚本"><span class="toc-num">4</span> 启动脚本</a></li>
@@ -503,7 +504,7 @@ td code { font-size: 0.81rem; }
 <p><strong>注意:</strong> <code>md2html.bat</code> 优先使用 <code>py -3</code> 启动器。若 <code>py -3</code> 与 <code>python</code> 指向不同的解释器,请确认 <code>py -3</code> 对应的 Python 也已安装依赖,否则会报 <code>ModuleNotFoundError: No module named 'markdown'</code>。</p>
 </blockquote>
 <h3 id="windows"><span class="sec-num">2.2</span> Windows</h3>
-<div class="highlight"><pre><span></span><code><span class="p">:</span><span class="c1">: 无参数(或双击):批量转换本目录所有 .md(不含子目录)</span>
+<div class="highlight"><pre><span></span><code><span class="p">:</span><span class="c1">: 无参数(或双击):批量转换当前目录所有 .md(不含子目录)</span>
 md2html.bat
 
 <span class="p">:</span><span class="c1">: 等价于</span>
@@ -515,11 +516,11 @@ md2html.bat 文档.md -o 输出\文档.html
 
 <blockquote>
 <p>若提示「'md2html.bat' 不是内部或外部命令」,请改用 <code>.\md2html.bat</code> 调用(系统开启了 <code>NoDefaultCurrentDirectoryInExePath</code> 策略时,cmd 不在当前目录查找程序)。</p>
-<p><strong>双击运行:</strong> 双击 <code>md2html.bat</code>(或无参数运行)会批量转换其所在目录的<strong>所有 <code>.md</code> 文件</strong>(不包括子文件夹),逐个输出结果并汇总数量,结束后窗口停留(按任意键关闭);目录中没有 <code>.md</code> 时显示错误提示。命令行带参数调用(如 <code>md2html.bat 文档.md</code>)只转换指定文件,不停留,可直接用于管道或自动化。</p>
+<p><strong>双击运行:</strong> 双击 <code>md2html.bat</code>(或无参数运行)会批量转换<strong>当前目录</strong>的<strong>所有 <code>.md</code> 文件</strong>(不包括子文件夹;双击时当前目录即脚本所在目录),逐个输出结果并汇总数量,结束后窗口停留(按任意键关闭);目录中没有 <code>.md</code> 时显示错误提示。命令行带参数调用(如 <code>md2html.bat 文档.md</code>)只转换指定文件,不停留,可直接用于管道或自动化。</p>
 </blockquote>
 <h3 id="linux-macos"><span class="sec-num">2.3</span> Linux / macOS</h3>
 <div class="highlight"><pre><span></span><code>chmod<span class="w"> </span>+x<span class="w"> </span>md2html.sh
-./md2html.sh<span class="w">                            </span><span class="c1"># 转换当前目录 README.md</span>
+./md2html.sh<span class="w">                            </span><span class="c1"># 批量转换当前目录所有 .md(不含子目录)</span>
 ./md2html.sh<span class="w"> </span>文档.md<span class="w"> </span>-o<span class="w"> </span>/tmp/out.html<span class="w">   </span><span class="c1"># 转换任意文件</span>
 </code></pre></div>
 
@@ -532,7 +533,7 @@ md2html.bat 文档.md -o 输出\文档.html
 
 <span class="n">positional</span><span class="w"> </span><span class="nl">arguments</span><span class="p">:</span>
 <span class="w">  </span><span class="k">input</span><span class="w">                </span><span class="n">输入的</span><span class="w"> </span><span class="p">.</span><span class="n">md</span><span class="w"> </span><span class="n">文件或包含</span><span class="w"> </span><span class="n">README</span><span class="p">.</span><span class="n">md</span><span class="w"> </span><span class="n">的目录</span>
-<span class="w">                       </span><span class="p">(</span><span class="nl">默认</span><span class="p">:</span><span class="n">当前目录的</span><span class="w"> </span><span class="n">README</span><span class="p">.</span><span class="n">md</span><span class="p">)</span>
+<span class="w">                       </span><span class="p">(</span><span class="nl">默认</span><span class="p">:</span><span class="n">当前目录下所有</span><span class="w"> </span><span class="p">.</span><span class="n">md</span><span class="w"> </span><span class="n">文件</span><span class="p">,</span><span class="n">不含子目录</span><span class="p">)</span>
 
 <span class="nl">options</span><span class="p">:</span>
 <span class="w">  </span><span class="o">-</span><span class="n">o</span><span class="p">,</span><span class="w"> </span><span class="c1">--output OUTPUT  输出 HTML 文件路径</span>
@@ -555,8 +556,8 @@ md2html.bat 文档.md -o 输出\文档.html
 <tbody>
 <tr>
 <td><code>md2html.py</code></td>
-<td><code>./README.md</code></td>
-<td><code>./README.html</code></td>
+<td>当前目录所有 <code>.md</code>(不含子目录)</td>
+<td>各源文件同名 <code>.html</code></td>
 </tr>
 <tr>
 <td><code>md2html.py docs/</code></td>
@@ -591,7 +592,15 @@ md2html.bat 文档.md -o 输出\文档.html
 <li>侧边栏副标题:输入文件名</li>
 <li>页脚:源文件名 + 生成日期(自动取当天,格式 <code>YYYY-MM</code>)</li>
 </ul>
-<h3 id="递归模式-r"><span class="sec-num">3.3</span> 递归模式(-r)</h3>
+<h3 id="批量模式无参数"><span class="sec-num">3.3</span> 批量模式(无参数)</h3>
+<p>不带 <code>input</code> 参数运行(如 <code>md2html.py</code>、双击 <code>md2html.bat</code>、<code>./md2html.sh</code>)会批量转换<strong>当前目录</strong>下所有 <code>.md</code> 文件(不包括子文件夹):</p>
+<ul>
+<li>输出与源文件同名的 <code>.html</code>;自动跳过隐藏文件与隐藏目录</li>
+<li>不能与 <code>-o/--output</code>、<code>--title</code> 同时使用(会报错并以退出码 1 结束)</li>
+<li>配合 <code>-r</code> 则递归包含子文件夹:<code>md2html.py -r</code></li>
+<li>目录中没有 <code>.md</code> 文件时报错并以退出码 1 结束;单个文件失败不影响其余,最后汇总数量</li>
+</ul>
+<h3 id="递归模式-r"><span class="sec-num">3.4</span> 递归模式(-r)</h3>
 <p><code>md2html.py -r [目录]</code>(省略目录时默认为当前目录)递归转换目录下所有 <code>.md</code> 文件:</p>
 <ul>
 <li>输出与源文件同名的 <code>.html</code>,保留子目录结构</li>
@@ -625,7 +634,7 @@ md2html.bat 文档.md -o 输出\文档.html
 <ul>
 <li>两个脚本都通过<strong>自身所在目录</strong>定位 <code>md2html.py</code>,可在任意工作目录调用(不依赖调用时的当前目录)</li>
 <li>所有命令行参数原样透传,退出码原样传递(输入缺失、输出为目录等错误统一返回 1,便于脚本集成)</li>
-<li>无参数运行(含双击)会批量转换脚本所在目录的所有 <code>.md</code> 文件(不含子目录);带参数则原样透传给 <code>md2html.py</code>(含 <code>-r</code> 递归模式)</li>
+<li>无参数运行(含双击)会批量转换<strong>当前目录</strong>的所有 <code>.md</code> 文件(不含子目录;双击时当前目录即脚本所在目录);带参数则原样透传给 <code>md2html.py</code>(含 <code>-r</code> 递归模式)</li>
 <li>双击 <code>md2html.bat</code> 时窗口会停留到按键(便于查看结果);命令行调用无停留,退出码直接返回</li>
 <li>找不到 Python 时输出错误提示并以退出码 1 结束</li>
 <li>实测说明:简体中文系统(GBK 代码页)的 cmd 下,中文文件名可正常使用;其他代码页建议改用 sh 或完整路径调用</li>

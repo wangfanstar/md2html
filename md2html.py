@@ -773,7 +773,8 @@ def build_parser():
     parser.add_argument(
         'input', nargs='?', default=None,
         help='input .md file, or a directory containing README.md '
-             '(default: README.md in the current directory)')
+             '(default: all .md files in the current directory, '
+             'subdirectories excluded)')
     parser.add_argument(
         '-o', '--output', default=None,
         help='output HTML file path (default: same name as the input '
@@ -789,12 +790,13 @@ def build_parser():
     return parser
 
 
-def convert_recursive(directory):
-    """Convert all .md files under directory recursively, skipping hidden
-    files and directories. Returns the process exit code."""
+def convert_tree(directory, recursive):
+    """Convert all .md files under directory (recursively if recursive),
+    skipping hidden files and directories. Returns the process exit code."""
     directory = Path(directory).resolve()
+    pattern = '**/*.md' if recursive else '*.md'
     md_files = sorted(
-        p for p in directory.rglob('*.md')
+        p for p in directory.glob(pattern)
         if not any(part.startswith('.') for part in p.relative_to(directory).parts)
     )
     if not md_files:
@@ -808,33 +810,26 @@ def convert_recursive(directory):
         except Exception as e:
             print(f"ERROR: {p}: {e}", file=sys.stderr)
             fail += 1
-    print(f"Recursive conversion done: {ok} ok, {fail} failed")
+    mode = 'Recursive' if recursive else 'Batch'
+    print(f"{mode} conversion done: {ok} ok, {fail} failed")
     return 0 if fail == 0 else 1
 
 
 def resolve_paths(args, cwd=None):
     """Resolve (input_path, output_path, title) from parsed args.
-    Returns None (after printing an error) if the input does not exist
-    or the output path is an existing directory.
+    args.input is required. Returns None (after printing an error) if the
+    input does not exist or the output path is an existing directory.
     """
     cwd = Path(cwd) if cwd is not None else Path.cwd()
-    dir_mode = False
-
-    if args.input is None:
-        dir_mode = True
-        input_path = cwd / 'README.md'
-    else:
-        p = Path(args.input)
-        input_path = p if p.is_absolute() else cwd / p
-        if input_path.is_dir():
-            dir_mode = True
-            input_path = input_path / 'README.md'
+    p = Path(args.input)
+    input_path = p if p.is_absolute() else cwd / p
+    dir_mode = input_path.is_dir()
+    if dir_mode:
+        input_path = input_path / 'README.md'
     input_path = input_path.resolve()
 
     if not input_path.exists():
         print(f"ERROR: {input_path} not found", file=sys.stderr)
-        if args.input is None:
-            print("用法: md2html.py [input.md | 目录] [-o out.html] [--title T]", file=sys.stderr)
         return None
 
     if args.output is not None:
@@ -865,6 +860,12 @@ def _setup_console_encoding():
 def main(argv=None):
     _setup_console_encoding()
     args = build_parser().parse_args(argv)
+    if args.input is None:
+        if args.output is not None or args.title is not None:
+            print("ERROR: -o/--output and --title require an input file "
+                  "or directory", file=sys.stderr)
+            return 1
+        return convert_tree(Path.cwd(), recursive=args.recursive)
     if args.recursive:
         if args.output is not None:
             print("ERROR: -o/--output cannot be used with -r/--recursive",
@@ -875,11 +876,8 @@ def main(argv=None):
                   file=sys.stderr)
             return 1
         cwd = Path.cwd()
-        if args.input is None:
-            dir_path = cwd
-        else:
-            p = Path(args.input)
-            dir_path = p if p.is_absolute() else cwd / p
+        p = Path(args.input)
+        dir_path = p if p.is_absolute() else cwd / p
         dir_path = dir_path.resolve()
         if dir_path.is_file():
             print(f"ERROR: -r/--recursive requires a directory, got a file: {dir_path}",
@@ -888,7 +886,7 @@ def main(argv=None):
         if not dir_path.is_dir():
             print(f"ERROR: {dir_path} not found", file=sys.stderr)
             return 1
-        return convert_recursive(dir_path)
+        return convert_tree(dir_path, recursive=True)
     resolved = resolve_paths(args)
     if resolved is None:
         return 1

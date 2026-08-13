@@ -170,6 +170,125 @@ class TestRecursive(unittest.TestCase):
             self.assertEqual(md2html.main(['-r', tmp]), 1)
 
 
+class TestConverter(unittest.TestCase):
+    def _conv(self, md):
+        return md2html.markdown_to_html(md)
+
+    # ---- 块级 ----
+    def test_headings(self):
+        self.assertIn('<h1>Title</h1>', self._conv('# Title'))
+        self.assertIn('<h2>Sec</h2>', self._conv('## Sec'))
+        self.assertIn('<h6>X</h6>', self._conv('###### X'))
+
+    def test_heading_with_inline(self):
+        self.assertEqual('<h2>你好 <code>世界</code></h2>', self._conv('## 你好 `世界`'))
+
+    def test_paragraph_with_br(self):
+        self.assertEqual('<p>a<br>b</p>', self._conv('a\nb'))
+
+    def test_two_paragraphs(self):
+        self.assertEqual('<p>a</p>\n<p>b</p>', self._conv('a\n\nb'))
+
+    def test_hr(self):
+        self.assertEqual('<hr>', self._conv('---'))
+
+    def test_fenced_code_with_lang(self):
+        html = self._conv('```python\nprint("hi")\n```')
+        self.assertIn('<div class="highlight"><pre><code class="language-python">', html)
+        self.assertIn('<span class="nb">print</span>', html)
+        self.assertIn('<span class="s1">&quot;hi&quot;</span>', html)
+
+    def test_fenced_code_no_lang(self):
+        html = self._conv('```\nplain <text>\n```')
+        self.assertIn('<div class="highlight"><pre><code>', html)
+        self.assertIn('plain &lt;text&gt;', html)
+        self.assertNotIn('class="language', html)
+
+    def test_tilde_fence(self):
+        self.assertIn('<pre><code class="language-bash">', self._conv('~~~bash\nls\n~~~'))
+
+    def test_table(self):
+        html = self._conv('| a | b |\n|---|---|\n| 1 | 2 |')
+        self.assertIn('<table>', html)
+        self.assertIn('<th>a</th>', html)
+        self.assertIn('<td>1</td>', html)
+        self.assertIn('<tbody>', html)
+
+    def test_table_with_inline(self):
+        html = self._conv('| a |\n|---|\n| `x` |')
+        self.assertIn('<td><code>x</code></td>', html)
+
+    def test_blockquote(self):
+        self.assertEqual('<blockquote>\n<p>note</p>\n</blockquote>', self._conv('> note'))
+
+    def test_blockquote_multiline(self):
+        html = self._conv('> a\n> b')
+        self.assertIn('<blockquote>', html)
+        self.assertIn('a<br>b', html)
+
+    def test_unordered_list(self):
+        self.assertEqual('<ul>\n<li>a</li>\n<li>b</li>\n</ul>\n', self._conv('- a\n- b'))
+
+    def test_ordered_list(self):
+        html = self._conv('1. a\n2. b')
+        self.assertIn('<ol>', html)
+        self.assertIn('<li>a</li>', html)
+
+    def test_nested_list(self):
+        html = self._conv('- a\n  - b\n- c')
+        self.assertEqual(html.count('<ul>'), 2)
+        self.assertIn('<li>a<ul>', html)
+
+    def test_empty_document(self):
+        self.assertEqual('', self._conv(''))
+
+    def test_paragraph_stops_at_heading(self):
+        self.assertEqual('<p>a</p>\n<h2>B</h2>', self._conv('a\n## B'))
+
+    # ---- 行内 ----
+    def test_inline_escaping(self):
+        self.assertEqual('<p>a &lt; b &amp; &quot;q&quot;</p>', self._conv('a < b & "q"'))
+
+    def test_bold_italic(self):
+        self.assertEqual('<p><strong>b</strong> <em>i</em></p>', self._conv('**b** *i*'))
+
+    def test_underscore_italic_not_in_word(self):
+        self.assertEqual('<p>foo_bar_baz</p>', self._conv('foo_bar_baz'))
+
+    def test_link(self):
+        self.assertEqual('<p><a href="https://x.test">t</a></p>',
+                         self._conv('[t](https://x.test)'))
+
+    def test_image(self):
+        self.assertEqual('<p><img src="i.png" alt="alt"></p>', self._conv('![alt](i.png)'))
+
+    def test_inline_html_passthrough(self):
+        self.assertEqual('<p>a<br>b</p>', self._conv('a<br>b'))
+
+    def test_link_text_with_formatting(self):
+        self.assertEqual('<p><a href="u">x <strong>y</strong></a></p>',
+                         self._conv('[x **y**](u)'))
+
+    # ---- 高亮器 ----
+    def test_highlight_unknown_lang_plain(self):
+        self.assertEqual('a &lt; b', md2html.highlight_code('a < b', 'nolang'))
+
+    def test_highlight_python_tokens(self):
+        html = md2html.highlight_code('# comment\nx = 42', 'python')
+        self.assertIn('<span class="c1"># comment</span>', html)
+        self.assertIn('<span class="mi">42</span>', html)
+
+    def test_highlight_bash_variable(self):
+        html = md2html.highlight_code('echo $HOME', 'bash')
+        self.assertIn('<span class="nb">echo</span>', html)
+        self.assertIn('<span class="nv">$HOME</span>', html)
+
+    def test_highlight_sql_keywords(self):
+        html = md2html.highlight_code("SELECT * FROM t WHERE x = 'v'", 'sql')
+        self.assertIn('<span class="k">SELECT</span>', html)
+        self.assertIn('<span class="s1">\'v\'</span>', html)
+
+
 class TestBatch(unittest.TestCase):
     def _chdir_tmp(self):
         tmp = tempfile.TemporaryDirectory()

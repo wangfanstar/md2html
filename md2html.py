@@ -36,6 +36,218 @@ def extract_first_h1(md_text):
     return None
 
 
+# ------------------------------------------------------------
+# Markdown -> HTML converter (standard library only)
+# ------------------------------------------------------------
+_INLINE_RE = re.compile(
+    r'(</?[A-Za-z][^>\n]*>)'          # raw inline HTML passthrough
+    r'|(!\[[^\]]*\]\([^)\s]+\))'      # image
+    r'|(\[[^\]]+\]\([^)\s]+\))'       # link
+    r'|(`[^`\n]+`)'                   # code span
+    r'|(\*\*[^*\n]+\*\*)'             # bold
+    r'|(\*[^*\n]+\*)'                 # italic (asterisk)
+    r'|((?<!\w)_[^_\n]+_(?!\w))'      # italic (underscore, word-bounded)
+)
+_HEADING_RE = re.compile(r'^(#{1,6})\s+(.*)$')
+_FENCE_RE = re.compile(r'^\s{0,3}(`{3,}|~{3,})\s*(.*)$')
+_HR_RE = re.compile(r'^\s{0,3}(-{3,}|\*{3,}|_{3,})\s*$')
+_LIST_RE = re.compile(r'^(\s*)([-*+]|\d+[.)])\s+(.*)$')
+_TABLE_DELIM_RE = re.compile(
+    r'^\s*\|?\s*:?-{3,}:?\s*(\|\s*:?-{3,}:?\s*)*\|?\s*$')
+
+
+def _escape_html(text):
+    return (text.replace('&', '&amp;')
+                .replace('<', '&lt;')
+                .replace('>', '&gt;')
+                .replace('"', '&quot;'))
+
+
+def _render_inline(text):
+    out = []
+    for tok in _INLINE_RE.split(text):
+        if not tok:
+            continue
+        m = re.fullmatch(r'</?[A-Za-z][^>\n]*>', tok)
+        if m:
+            out.append(tok)
+            continue
+        m = re.fullmatch(r'!\[([^\]]*)\]\(([^)\s]+)\)', tok)
+        if m:
+            out.append(f'<img src="{_escape_html(m.group(2))}" '
+                       f'alt="{_escape_html(m.group(1))}">')
+            continue
+        m = re.fullmatch(r'\[([^\]]+)\]\(([^)\s]+)\)', tok)
+        if m:
+            out.append(f'<a href="{_escape_html(m.group(2))}">'
+                       f'{_render_inline(m.group(1))}</a>')
+            continue
+        m = re.fullmatch(r'`([^`\n]+)`', tok)
+        if m:
+            out.append('<code>' + _escape_html(m.group(1)) + '</code>')
+            continue
+        m = re.fullmatch(r'\*\*([^*\n]+)\*\*', tok)
+        if m:
+            out.append('<strong>' + _render_inline(m.group(1)) + '</strong>')
+            continue
+        m = re.fullmatch(r'\*([^*\n]+)\*', tok)
+        if m:
+            out.append('<em>' + _render_inline(m.group(1)) + '</em>')
+            continue
+        m = re.fullmatch(r'(?<!\w)_([^_\n]+)_(?!\w)', tok)
+        if m:
+            out.append('<em>' + _render_inline(m.group(1)) + '</em>')
+            continue
+        out.append(_escape_html(tok))
+    return ''.join(out)
+
+
+def highlight_code(code, lang):
+    """Highlight code for the given language; unknown language -> escaped
+    plain text. (Full tokenizer lands in Task 3.)"""
+    return _escape_html(code)
+
+
+def markdown_to_html(md_text):
+    lines = md_text.split('\n')
+    out = []
+    i = 0
+    n = len(lines)
+    while i < n:
+        line = lines[i]
+        if not line.strip():
+            i += 1
+            continue
+        hm = _HEADING_RE.match(line)
+        if hm:
+            level = len(hm.group(1))
+            title = re.sub(r'\s+#+\s*$', '', hm.group(2)).strip()
+            out.append(f'<h{level}>{_render_inline(title)}</h{level}>')
+            i += 1
+            continue
+        fm = _FENCE_RE.match(line)
+        if fm and len(fm.group(1)) >= 3:
+            fence_char = fm.group(1)[0]
+            lang = fm.group(2).strip()
+            i += 1
+            buf = []
+            close_re = re.compile(r'^\s{0,3}' + re.escape(fence_char) + r'{3,}\s*$')
+            while i < n and not close_re.match(lines[i]):
+                buf.append(lines[i])
+                i += 1
+            if i < n:
+                i += 1
+            code = '\n'.join(buf)
+            lang_class = f' class="language-{lang}"' if lang else ''
+            out.append(f'<div class="highlight"><pre><code{lang_class}>'
+                       f'{highlight_code(code, lang)}</code></pre></div>')
+            continue
+        if _HR_RE.match(line):
+            out.append('<hr>')
+            i += 1
+            continue
+        if line.strip().startswith('>'):
+            buf = []
+            while i < n and lines[i].strip().startswith('>'):
+                buf.append(re.sub(r'^\s{0,3}>\s?', '', lines[i]))
+                i += 1
+            out.append('<blockquote>\n' + markdown_to_html('\n'.join(buf))
+                       + '\n</blockquote>')
+            continue
+        lm = _LIST_RE.match(line)
+        if lm:
+            html, i = _parse_list(lines, i)
+            out.append(html)
+            continue
+        if '|' in line and i + 1 < n and _TABLE_DELIM_RE.match(lines[i + 1]):
+            html, i = _parse_table(lines, i)
+            out.append(html)
+            continue
+        buf = [line]
+        i += 1
+        while i < n and lines[i].strip():
+            if (_HEADING_RE.match(lines[i]) or _FENCE_RE.match(lines[i])
+                    or _HR_RE.match(lines[i]) or _LIST_RE.match(lines[i])
+                    or lines[i].strip().startswith('>')):
+                break
+            if ('|' in lines[i] and i + 1 < n
+                    and _TABLE_DELIM_RE.match(lines[i + 1])):
+                break
+            buf.append(lines[i])
+            i += 1
+        out.append('<p>' + '<br>'.join(_render_inline(b) for b in buf) + '</p>')
+    return '\n'.join(out)
+
+
+def _parse_list(lines, i):
+    """Parse one list starting at lines[i]; returns (html, next_index)."""
+    first = _LIST_RE.match(lines[i])
+    indent = len(first.group(1))
+    ordered = first.group(2)[0].isdigit()
+    tag = 'ol' if ordered else 'ul'
+    n = len(lines)
+    out = [f'<{tag}>\n']
+    while i < n:
+        m = _LIST_RE.match(lines[i])
+        if (not m or len(m.group(1)) != indent
+                or ordered != m.group(2)[0].isdigit()):
+            break
+        content = [m.group(3)]
+        i += 1
+        sub_html = ''
+        while i < n:
+            line = lines[i]
+            if not line.strip():
+                i += 1
+                break
+            lm = _LIST_RE.match(line)
+            if lm and len(lm.group(1)) <= indent:
+                break
+            if lm and len(lm.group(1)) > indent:
+                sub_html, i = _parse_list(lines, i)
+                continue
+            content.append(line[indent:] if len(line) > indent else line.lstrip())
+            i += 1
+        out.append(_render_list_item(content, sub_html))
+    out.append(f'</{tag}>\n')
+    return ''.join(out), i
+
+
+def _render_list_item(content, sub_html):
+    text = '\n'.join(content).strip('\n')
+    if '\n' not in text:
+        return f'<li>{_render_inline(text)}{sub_html}</li>\n'
+    return f'<li>{markdown_to_html(text)}{sub_html}</li>\n'
+
+
+def _parse_table(lines, i):
+    header = _split_cells(lines[i])
+    i += 2  # skip header + delimiter row
+    rows = []
+    n = len(lines)
+    while i < n and lines[i].strip() and '|' in lines[i]:
+        rows.append(_split_cells(lines[i]))
+        i += 1
+    thead = ('<thead>\n<tr>\n'
+             + ''.join(f'<th>{_render_inline(c)}</th>\n' for c in header)
+             + '</tr>\n</thead>\n')
+    tbody = ('<tbody>\n'
+             + ''.join('<tr>\n'
+                       + ''.join(f'<td>{_render_inline(c)}</td>\n' for c in row)
+                       + '</tr>\n' for row in rows)
+             + '</tbody>\n')
+    return f'<table>\n{thead}{tbody}</table>\n', i
+
+
+def _split_cells(line):
+    line = line.strip()
+    if line.startswith('|'):
+        line = line[1:]
+    if line.endswith('|'):
+        line = line[:-1]
+    return [c.strip() for c in line.split('|')]
+
+
 def build_heading_index(md_text):
     """Extract all headings from markdown, assign section numbers.
     Returns (flat_list, tree_for_toc) where each entry has:

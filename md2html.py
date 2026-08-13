@@ -1,7 +1,7 @@
 #!/usr/bin/env python3
 """
 Convert a Markdown file into a standalone HTML page with sidebar TOC navigation.
-Requires: pip install markdown pygments
+Zero dependencies - Python standard library only.
 """
 import argparse
 import html
@@ -9,8 +9,6 @@ import re
 import sys
 from datetime import datetime
 from pathlib import Path
-
-import markdown
 
 def slugify(title):
     """Generate an HTML anchor ID from a heading title."""
@@ -540,22 +538,8 @@ def convert(input_path, output_path, title=None):
     heading_index, toc_items = build_heading_index(md_text)
     toc_html = render_toc_html(toc_items)
 
-    # Convert markdown to HTML with extensions
-    extensions = [
-        'fenced_code',
-        'tables',
-        'codehilite',
-        'nl2br',
-        'sane_lists',
-    ]
-    ext_configs = {
-        'codehilite': {
-            'css_class': 'highlight',
-            'guess_lang': True,
-        },
-    }
-    md = markdown.Markdown(extensions=extensions, extension_configs=ext_configs)
-    body_html = md.convert(md_text)
+    # Convert markdown to HTML (stdlib converter)
+    body_html = markdown_to_html(md_text)
 
     # Remove the TOC section from body (everything from "目录" h2 through the following hr)
     body_html = re.sub(

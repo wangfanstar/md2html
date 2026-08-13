@@ -441,7 +441,7 @@ td code { font-size: 0.81rem; }
   <li><a href="#概述"><span class="toc-num">1</span> 概述</a></li>
   <li class="has-children"><a href="#快速开始"><span class="toc-num">2</span> 快速开始</a>
 <ul>
-  <li><a href="#安装依赖"><span class="toc-num">2.1</span> 安装依赖</a></li>
+  <li><a href="#环境要求"><span class="toc-num">2.1</span> 环境要求</a></li>
   <li><a href="#windows"><span class="toc-num">2.2</span> Windows</a></li>
   <li><a href="#linux-macos"><span class="toc-num">2.3</span> Linux / macOS</a></li>
 </ul>
@@ -490,60 +490,49 @@ td code { font-size: 0.81rem; }
 <h2 id="概述"><span class="sec-num">1</span> 概述</h2>
 <p><code>md2html.py</code> 将 Markdown 文件(默认 <code>README.md</code>)转换为带<strong>侧边栏目录导航</strong>的独立 HTML 文件。</p>
 <ul>
-<li>单文件工具,拷贝即用,无需安装</li>
+<li>单文件工具,拷贝即用,<strong>零第三方依赖</strong>(纯 Python 标准库,无需 pip install)</li>
 <li>生成的 HTML 可离线使用——CSS 和 JavaScript 全部内嵌</li>
 <li>跨平台:Windows / Linux / macOS 均可运行,附 <code>md2html.bat</code> / <code>md2html.sh</code> 启动脚本</li>
 </ul>
-<h2 id="快速开始"><span class="sec-num">2</span> 快速开始</h2>
-<h3 id="安装依赖"><span class="sec-num">2.1</span> 安装依赖</h3>
-<div class="highlight"><pre><span></span><code>pip<span class="w"> </span>install<span class="w"> </span>markdown<span class="w"> </span>pygments
-</code></pre></div>
 
-<p>(Pygments 用于代码高亮;缺 Pygments 时代码块不高亮,但转换仍可正常工作,建议安装。)</p>
-<blockquote>
-<p><strong>注意:</strong> <code>md2html.bat</code> 优先使用 <code>py -3</code> 启动器。若 <code>py -3</code> 与 <code>python</code> 指向不同的解释器,请确认 <code>py -3</code> 对应的 Python 也已安装依赖,否则会报 <code>ModuleNotFoundError: No module named 'markdown'</code>。</p>
-</blockquote>
+<h2 id="快速开始"><span class="sec-num">2</span> 快速开始</h2>
+<h3 id="环境要求"><span class="sec-num">2.1</span> 环境要求</h3>
+<p><strong>无需安装任何第三方依赖</strong>——仅需 Python 3.8+(Markdown 解析与代码高亮均为内置实现,不会再出现 <code>No module named markdown</code> 报错)。</p>
 <h3 id="windows"><span class="sec-num">2.2</span> Windows</h3>
-<div class="highlight"><pre><span></span><code><span class="p">:</span><span class="c1">: 无参数(或双击):批量转换当前目录所有 .md(不含子目录)</span>
+<div class="highlight"><pre><code class="language-bat">:: 无参数(或双击):批量转换当前目录所有 .md(不含子目录)
 md2html.bat
 
-<span class="p">:</span><span class="c1">: 等价于</span>
+:: 等价于
 python md2html.py
 
-<span class="p">:</span><span class="c1">: 转换任意文件</span>
-md2html.bat 文档.md -o 输出\文档.html
-</code></pre></div>
-
+:: 转换任意文件
+md2html.bat 文档.md -o 输出\文档.html</code></pre></div>
 <blockquote>
 <p>若提示「'md2html.bat' 不是内部或外部命令」,请改用 <code>.\md2html.bat</code> 调用(系统开启了 <code>NoDefaultCurrentDirectoryInExePath</code> 策略时,cmd 不在当前目录查找程序)。</p>
+</blockquote>
+<blockquote>
 <p><strong>双击运行:</strong> 双击 <code>md2html.bat</code>(或无参数运行)会批量转换<strong>当前目录</strong>的<strong>所有 <code>.md</code> 文件</strong>(不包括子文件夹;双击时当前目录即脚本所在目录),逐个输出结果并汇总数量,结束后窗口停留(按任意键关闭);目录中没有 <code>.md</code> 时显示错误提示。命令行带参数调用(如 <code>md2html.bat 文档.md</code>)只转换指定文件,不停留,可直接用于管道或自动化。</p>
 </blockquote>
 <h3 id="linux-macos"><span class="sec-num">2.3</span> Linux / macOS</h3>
-<div class="highlight"><pre><span></span><code>chmod<span class="w"> </span>+x<span class="w"> </span>md2html.sh
-./md2html.sh<span class="w">                            </span><span class="c1"># 批量转换当前目录所有 .md(不含子目录)</span>
-./md2html.sh<span class="w"> </span>文档.md<span class="w"> </span>-o<span class="w"> </span>/tmp/out.html<span class="w">   </span><span class="c1"># 转换任意文件</span>
-</code></pre></div>
-
+<div class="highlight"><pre><code class="language-bash"><span class="nb">chmod</span> +x md2html.sh
+./md2html.sh                            <span class="c1"># 批量转换当前目录所有 .md(不含子目录)</span>
+./md2html.sh 文档.md -o /tmp/out.html   <span class="c1"># 转换任意文件</span></code></pre></div>
 <p>或直接用 Python:</p>
-<div class="highlight"><pre><span></span><code>python3<span class="w"> </span>md2html.py<span class="w"> </span>文档.md
-</code></pre></div>
-
+<div class="highlight"><pre><code class="language-bash"><span class="nb">python3</span> md2html.py 文档.md</code></pre></div>
 <h2 id="命令行用法"><span class="sec-num">3</span> 命令行用法</h2>
-<div class="highlight"><pre><span></span><code><span class="k">usage</span><span class="err">:</span><span class="w"> </span><span class="n">md2html</span><span class="w"> </span><span class="o">[</span><span class="n">-h</span><span class="o">]</span><span class="w"> </span><span class="o">[</span><span class="n">-o OUTPUT</span><span class="o">]</span><span class="w"> </span><span class="o">[</span><span class="n">--title TITLE</span><span class="o">]</span><span class="w"> </span><span class="o">[</span><span class="n">-r</span><span class="o">]</span><span class="w"> </span><span class="o">[</span><span class="n">input</span><span class="o">]</span>
+<div class="highlight"><pre><code>usage: md2html [-h] [-o OUTPUT] [--title TITLE] [-r] [input]
 
-<span class="n">positional</span><span class="w"> </span><span class="nl">arguments</span><span class="p">:</span>
-<span class="w">  </span><span class="k">input</span><span class="w">                </span><span class="n">输入的</span><span class="w"> </span><span class="p">.</span><span class="n">md</span><span class="w"> </span><span class="n">文件或包含</span><span class="w"> </span><span class="n">README</span><span class="p">.</span><span class="n">md</span><span class="w"> </span><span class="n">的目录</span>
-<span class="w">                       </span><span class="p">(</span><span class="nl">默认</span><span class="p">:</span><span class="n">当前目录下所有</span><span class="w"> </span><span class="p">.</span><span class="n">md</span><span class="w"> </span><span class="n">文件</span><span class="p">,</span><span class="n">不含子目录</span><span class="p">)</span>
+positional arguments:
+  input                输入的 .md 文件或包含 README.md 的目录
+                       (默认:当前目录下所有 .md 文件,不含子目录)
 
-<span class="nl">options</span><span class="p">:</span>
-<span class="w">  </span><span class="o">-</span><span class="n">o</span><span class="p">,</span><span class="w"> </span><span class="c1">--output OUTPUT  输出 HTML 文件路径</span>
-<span class="w">                       </span><span class="p">(</span><span class="nl">默认</span><span class="p">:</span><span class="n">与输入同名</span><span class="w"> </span><span class="p">.</span><span class="n">html</span><span class="p">;</span><span class="n">目录模式为</span><span class="w"> </span><span class="n">README</span><span class="p">.</span><span class="n">html</span><span class="p">)</span>
-<span class="w">  </span><span class="c1">--title TITLE        手动指定 HTML 标题</span>
-<span class="w">                       </span><span class="p">(</span><span class="nl">默认</span><span class="p">:</span><span class="n">文档第一个</span><span class="w"> </span><span class="n">h1</span><span class="p">,</span><span class="n">无</span><span class="w"> </span><span class="n">h1</span><span class="w"> </span><span class="n">时为输入文件名</span><span class="p">)</span>
-<span class="w">  </span><span class="o">-</span><span class="n">r</span><span class="p">,</span><span class="w"> </span><span class="c1">--recursive      递归转换输入目录下所有 .md 文件</span>
-<span class="w">                       </span><span class="p">(</span><span class="n">需要目录输入</span><span class="p">;</span><span class="n">不能与</span><span class="w"> </span><span class="o">-</span><span class="n">o</span><span class="o">/</span><span class="c1">--title 同时使用)</span>
-</code></pre></div>
-
+options:
+  -o, --output OUTPUT  输出 HTML 文件路径
+                       (默认:与输入同名 .html;目录模式为 README.html)
+  --title TITLE        手动指定 HTML 标题
+                       (默认:文档第一个 h1,无 h1 时为输入文件名)
+  -r, --recursive      递归转换输入目录下所有 .md 文件
+                       (需要目录输入;不能与 -o/--title 同时使用)</code></pre></div>
 <h3 id="模式示例"><span class="sec-num">3.1</span> 模式示例</h3>
 <table>
 <thead>
@@ -575,7 +564,7 @@ md2html.bat 文档.md -o 输出\文档.html
 <td><code>out/guide.html</code>(自动建目录)</td>
 </tr>
 <tr>
-<td><code>md2html.py --title "使用指南" guide.md</code></td>
+<td><code>md2html.py --title &quot;使用指南&quot; guide.md</code></td>
 <td><code>guide.md</code></td>
 <td><code>guide.html</code>,标题为「使用指南」</td>
 </tr>
@@ -586,12 +575,14 @@ md2html.bat 文档.md -o 输出\文档.html
 </tr>
 </tbody>
 </table>
+
 <h3 id="标题与页脚"><span class="sec-num">3.2</span> 标题与页脚</h3>
 <ul>
 <li>HTML 标题来源:<code>--title</code> 参数 &gt; 文档第一个 <code>#</code> 标题 &gt; 输入文件名(不含扩展名)</li>
 <li>侧边栏副标题:输入文件名</li>
 <li>页脚:源文件名 + 生成日期(自动取当天,格式 <code>YYYY-MM</code>)</li>
 </ul>
+
 <h3 id="批量模式无参数"><span class="sec-num">3.3</span> 批量模式(无参数)</h3>
 <p>不带 <code>input</code> 参数运行(如 <code>md2html.py</code>、双击 <code>md2html.bat</code>、<code>./md2html.sh</code>)会批量转换<strong>当前目录</strong>下所有 <code>.md</code> 文件(不包括子文件夹):</p>
 <ul>
@@ -600,6 +591,7 @@ md2html.bat 文档.md -o 输出\文档.html
 <li>配合 <code>-r</code> 则递归包含子文件夹:<code>md2html.py -r</code></li>
 <li>目录中没有 <code>.md</code> 文件时报错并以退出码 1 结束;单个文件失败不影响其余,最后汇总数量</li>
 </ul>
+
 <h3 id="递归模式-r"><span class="sec-num">3.4</span> 递归模式(-r)</h3>
 <p><code>md2html.py -r [目录]</code>(省略目录时默认为当前目录)递归转换目录下所有 <code>.md</code> 文件:</p>
 <ul>
@@ -609,6 +601,7 @@ md2html.bat 文档.md -o 输出\文档.html
 <li>单个文件转换失败不影响其余文件,最后汇总数量;有失败时退出码为 1</li>
 <li>启动脚本同样支持:<code>md2html.bat -r</code> / <code>./md2html.sh -r</code></li>
 </ul>
+
 <h2 id="启动脚本"><span class="sec-num">4</span> 启动脚本</h2>
 <table>
 <thead>
@@ -631,6 +624,7 @@ md2html.bat 文档.md -o 输出\文档.html
 </tr>
 </tbody>
 </table>
+
 <ul>
 <li>两个脚本都通过<strong>自身所在目录</strong>定位 <code>md2html.py</code>,可在任意工作目录调用(不依赖调用时的当前目录)</li>
 <li>所有命令行参数原样透传,退出码原样传递(输入缺失、输出为目录等错误统一返回 1,便于脚本集成)</li>
@@ -639,36 +633,30 @@ md2html.bat 文档.md -o 输出\文档.html
 <li>找不到 Python 时输出错误提示并以退出码 1 结束</li>
 <li>实测说明:简体中文系统(GBK 代码页)的 cmd 下,中文文件名可正常使用;其他代码页建议改用 sh 或完整路径调用</li>
 </ul>
+
 <h2 id="依赖"><span class="sec-num">5</span> 依赖</h2>
 <table>
 <thead>
 <tr>
 <th>依赖</th>
-<th>安装</th>
 <th>说明</th>
 </tr>
 </thead>
 <tbody>
 <tr>
 <td>Python</td>
-<td>3.8+</td>
-<td>Windows:python.org 安装并勾选 "Add to PATH"</td>
+<td>3.8+(唯一要求,Windows:python.org 安装并勾选 &quot;Add to PATH&quot;)</td>
 </tr>
 <tr>
-<td>markdown</td>
-<td><code>pip install markdown</code></td>
-<td>Markdown 解析</td>
-</tr>
-<tr>
-<td>Pygments</td>
-<td><code>pip install pygments</code></td>
-<td>代码高亮(推荐安装)</td>
+<td>第三方库</td>
+<td>无(Markdown 解析与代码高亮均为内置实现)</td>
 </tr>
 </tbody>
 </table>
+
 <h2 id="生成的-html-特性"><span class="sec-num">6</span> 生成的 HTML 特性</h2>
 <h3 id="布局与导航"><span class="sec-num">6.1</span> 布局与导航</h3>
-<div class="highlight"><pre><span></span><code>┌──────────────────┬──────────────────────────────────────────┐
+<div class="highlight"><pre><code>┌──────────────────┬──────────────────────────────────────────┐
 │   侧边栏导航      │          主内容区                          │
 │   (300px fixed)  │          (max 1240px)                    │
 │                  │                                          │
@@ -683,29 +671,32 @@ md2html.bat 文档.md -o 输出\文档.html
 │  │  ...       │  │  ## h2 章节                               │
 │  └────────────┘  │  ### h3 小节                             │
 │                  │                                          │
-└──────────────────┴──────────────────────────────────────────┘
-</code></pre></div>
+└──────────────────┴──────────────────────────────────────────┘</code></pre></div>
+<p><strong>侧边栏行为:</strong></p>
+<ul>
+<li><strong>固定定位</strong>:滚动主内容时始终可见</li>
+<li><strong>自动高亮</strong>:随页面滚动,当前阅读位置对应的导航项自动高亮(蓝色左边框)</li>
+<li><strong>自动滚动</strong>:高亮项超出可视区时自动滚入视野</li>
+<li><strong>平滑跳转</strong>:点击导航项 → 平滑滚动到对应章节</li>
+<li><strong>层级缩进</strong>:h2(粗体)/ h3(缩进)/ h4(更深缩进)三级结构</li>
+<li><strong>移动端适配</strong>:≤900px 宽度时侧边栏自动折叠,左上角出现汉堡菜单按钮</li>
+</ul>
 
-<p><strong>侧边栏行为:</strong><br />
-- <strong>固定定位</strong>:滚动主内容时始终可见<br />
-- <strong>自动高亮</strong>:随页面滚动,当前阅读位置对应的导航项自动高亮(蓝色左边框)<br />
-- <strong>自动滚动</strong>:高亮项超出可视区时自动滚入视野<br />
-- <strong>平滑跳转</strong>:点击导航项 → 平滑滚动到对应章节<br />
-- <strong>层级缩进</strong>:h2(粗体)/ h3(缩进)/ h4(更深缩进)三级结构<br />
-- <strong>移动端适配</strong>:≤900px 宽度时侧边栏自动折叠,左上角出现汉堡菜单按钮</p>
 <h3 id="代码块"><span class="sec-num">6.2</span> 代码块</h3>
 <ul>
-<li>使用 <strong>Pygments</strong> 进行语法高亮</li>
-<li>自动检测语言(bash / yaml / c / python / jinja2 等)</li>
+<li>使用<strong>内置轻量高亮器</strong>(标准库正则实现)进行语法高亮</li>
+<li>按围栏语言标签高亮(python / bash / yaml / json / sql / c / cpp / js / bat / html 等,未知语言纯文本)</li>
 <li>支持明暗双主题(跟随系统 <code>prefers-color-scheme</code>)</li>
 <li>横向溢出时出现滚动条,不会撑破布局</li>
 </ul>
+
 <h3 id="表格"><span class="sec-num">6.3</span> 表格</h3>
 <ul>
 <li>全宽显示,带交替行条纹</li>
 <li>表头固定大写风格</li>
 <li>圆角边框,打印时避免跨页断裂</li>
 </ul>
+
 <h3 id="明暗主题"><span class="sec-num">6.4</span> 明暗主题</h3>
 <p>CSS 使用 <code>prefers-color-scheme: dark</code> 媒体查询自动切换:</p>
 <table>
@@ -744,12 +735,16 @@ md2html.bat 文档.md -o 输出\文档.html
 </tr>
 </tbody>
 </table>
+
 <h3 id="打印样式"><span class="sec-num">6.5</span> 打印样式</h3>
-<p><code>@media print</code> 下自动:<br />
-- 隐藏侧边栏和导航按钮<br />
-- 主内容全宽,黑色文字白色背景<br />
-- 表格和代码块避免跨页断裂<br />
-- 标题避免孤行</p>
+<p><code>@media print</code> 下自动:</p>
+<ul>
+<li>隐藏侧边栏和导航按钮</li>
+<li>主内容全宽,黑色文字白色背景</li>
+<li>表格和代码块避免跨页断裂</li>
+<li>标题避免孤行</li>
+</ul>
+
 <h3 id="键盘与无障碍"><span class="sec-num">6.6</span> 键盘与无障碍</h3>
 <table>
 <thead>
@@ -777,43 +772,39 @@ md2html.bat 文档.md -o 输出\文档.html
 </tr>
 </tbody>
 </table>
+
 <h2 id="技术实现"><span class="sec-num">7</span> 技术实现</h2>
 <h3 id="处理流程"><span class="sec-num">7.1</span> 处理流程</h3>
-<div class="highlight"><pre><span></span><code><span class="s s-Atom">输入</span> <span class="p">.</span><span class="s s-Atom">md</span> <span class="nf">文件</span><span class="p">(</span><span class="s s-Atom">默认</span> <span class="nv">README</span><span class="p">.</span><span class="s s-Atom">md</span><span class="p">)</span>
-    <span class="s s-Atom">│</span>
-    <span class="s s-Atom">▼</span> <span class="nf">标题提取</span><span class="o">:--</span><span class="s s-Atom">title</span> <span class="o">&gt;</span> <span class="s s-Atom">第一个</span> <span class="s s-Atom">h1</span> <span class="o">&gt;</span> <span class="s s-Atom">文件名</span>
-    <span class="s s-Atom">▼</span> <span class="nv">Python</span> <span class="s s-Atom">markdown</span> <span class="s s-Atom">库</span> <span class="o">+</span> <span class="s s-Atom">extensions</span>
-    <span class="s s-Atom">│</span>  <span class="s s-Atom">├─</span> <span class="s s-Atom">fenced_code</span>  <span class="s s-Atom">→</span> <span class="s s-Atom">围栏代码块</span>
-    <span class="s s-Atom">│</span>  <span class="s s-Atom">├─</span> <span class="s s-Atom">tables</span>       <span class="s s-Atom">→</span> <span class="nv">GFM</span> <span class="s s-Atom">表格</span>
-    <span class="s s-Atom">│</span>  <span class="s s-Atom">├─</span> <span class="s s-Atom">codehilite</span>   <span class="s s-Atom">→</span> <span class="nv">Pygments</span> <span class="s s-Atom">语法高亮</span>
-    <span class="s s-Atom">│</span>  <span class="s s-Atom">├─</span> <span class="s s-Atom">nl2br</span>        <span class="s s-Atom">→</span> <span class="s s-Atom">单换行转</span> <span class="o">&lt;</span><span class="s s-Atom">br</span><span class="o">&gt;</span>
-    <span class="s s-Atom">│</span>  <span class="s s-Atom">└─</span> <span class="s s-Atom">sane_lists</span>   <span class="s s-Atom">→</span> <span class="s s-Atom">合理列表嵌套</span>
-    <span class="s s-Atom">│</span>
-    <span class="s s-Atom">▼</span> <span class="s s-Atom">后处理</span>
-    <span class="s s-Atom">│</span>  <span class="s s-Atom">├─</span> <span class="s s-Atom">移除静态</span> <span class="nv">TOC</span><span class="p">(</span><span class="s s-Atom">替换为侧边栏导航</span><span class="p">)</span>
-    <span class="s s-Atom">│</span>  <span class="s s-Atom">└─</span> <span class="s s-Atom">注入</span> <span class="s s-Atom">h2</span><span class="o">/</span><span class="s s-Atom">h3</span><span class="o">/</span><span class="s s-Atom">h4</span> <span class="s s-Atom">的</span> <span class="s s-Atom">id</span> <span class="s s-Atom">与章节编号</span>
-    <span class="s s-Atom">│</span>
-    <span class="s s-Atom">▼</span> <span class="s s-Atom">注入</span> <span class="nv">HTML</span> <span class="s s-Atom">模板</span>
-    <span class="s s-Atom">│</span>  <span class="s s-Atom">├─</span> <span class="nv">CSS</span> <span class="p">(</span><span class="o">~</span><span class="mi">450</span> <span class="s s-Atom">行内嵌</span><span class="p">)</span>
-    <span class="s s-Atom">│</span>  <span class="s s-Atom">├─</span> <span class="nv">JS</span>  <span class="p">(</span><span class="s s-Atom">侧边栏交互逻辑</span><span class="p">)</span>
-    <span class="s s-Atom">│</span>  <span class="s s-Atom">├─</span> <span class="nv">TOC</span> <span class="p">(</span><span class="s s-Atom">从</span> <span class="s s-Atom">markdown</span> <span class="s s-Atom">heading</span> <span class="s s-Atom">提取的层级导航</span><span class="p">)</span>
-    <span class="s s-Atom">│</span>  <span class="s s-Atom">└─</span> <span class="s s-Atom">动态内容</span><span class="o">:</span><span class="s s-Atom">标题</span> <span class="o">/</span> <span class="s s-Atom">源文件名</span> <span class="o">/</span> <span class="nf">生成日期</span><span class="p">(</span><span class="nv">YYYY</span><span class="o">-</span><span class="nv">MM</span><span class="p">)</span>
-    <span class="s s-Atom">│</span>
-    <span class="s s-Atom">▼</span>
-<span class="s s-Atom">输出</span> <span class="p">.</span><span class="nf">html</span> <span class="p">(</span><span class="s s-Atom">独立离线可用</span><span class="p">)</span>
-</code></pre></div>
-
+<div class="highlight"><pre><code>输入 .md 文件(默认 README.md)
+    │
+    ▼ 标题提取:--title &gt; 第一个 h1 &gt; 文件名
+    ▼ 内置解析器(纯标准库,零依赖)
+    │  ├─ 块级:标题/段落/围栏代码/表格/引用/列表/hr
+    │  ├─ 行内:粗斜体/行内代码/链接/图片/转义/行内 HTML 透传
+    │  ├─ nl2br:段落内单换行转 &lt;br&gt;
+    │  └─ 内置高亮器:正则 token 扫描,输出 Pygments 同款 CSS 类
+    │
+    ▼ 后处理
+    │  ├─ 移除静态 TOC(替换为侧边栏导航)
+    │  └─ 注入 h2/h3/h4 的 id 与章节编号
+    │
+    ▼ 注入 HTML 模板
+    │  ├─ CSS (~450 行内嵌)
+    │  ├─ JS  (侧边栏交互逻辑)
+    │  ├─ TOC (从 markdown heading 提取的层级导航)
+    │  └─ 动态内容:标题 / 源文件名 / 生成日期(YYYY-MM)
+    │
+    ▼
+输出 .html (独立离线可用)</code></pre></div>
 <h3 id="toc-生成策略"><span class="sec-num">7.2</span> TOC 生成策略</h3>
 <p>不从 Markdown 的 <code>[TOC]</code> 扩展生成,而是<strong>直接从 <code>#</code> heading 行正则提取</strong>:</p>
-<div class="highlight"><pre><span></span><code><span class="c1"># 正则匹配 h2/h3/h4 heading</span>
-<span class="n">m</span> <span class="o">=</span> <span class="n">re</span><span class="o">.</span><span class="n">match</span><span class="p">(</span><span class="sa">r</span><span class="s1">&#39;^(#{2,4})\s+(.+)$&#39;</span><span class="p">,</span> <span class="n">line</span><span class="p">)</span>
+<div class="highlight"><pre><code class="language-python"><span class="c1"># 正则匹配 h2/h3/h4 heading</span>
+m = re.<span class="nf">match</span>(<span class="s2">r'^(#{2,4})\s+(.+)$'</span>, line)
 
 <span class="c1"># 构建嵌套树结构:按 heading 层级确定父子关系</span>
 <span class="c1"># h2 → depth=0 (根节点)</span>
 <span class="c1"># h3 → depth=1 (挂在最近的 h2 下)</span>
-<span class="c1"># h4 → depth=2 (挂在最近的 h3 下)</span>
-</code></pre></div>
-
+<span class="c1"># h4 → depth=2 (挂在最近的 h3 下)</span></code></pre></div>
 <p>这样生成的 TOC 结构与 markdown toc 扩展一致(仅取 h2–h4),且更可控(可排除特定章节、调整深度等)。</p>
 <h3 id="跨平台兼容"><span class="sec-num">7.3</span> 跨平台兼容</h3>
 <ul>
@@ -821,7 +812,9 @@ md2html.bat 文档.md -o 输出\文档.html
 <li>读写均显式 <code>encoding='utf-8'</code>(输出无 BOM、<code>\n</code> 换行,浏览器兼容性最好)</li>
 <li>启动时对 stdout/stderr 做 UTF-8 reconfigure,避免 Windows GBK 控制台打印中文乱码</li>
 <li>启动脚本自动探测解释器:<code>md2html.bat</code> 依次尝试 <code>py -3</code> / <code>python</code> / <code>python3</code>;<code>md2html.sh</code> 依次尝试 <code>python3</code> / <code>python</code></li>
+<li>零第三方依赖:<code>python -S</code>(跳过 site-packages)下可完整运行,不会出现 <code>No module named markdown</code></li>
 </ul>
+
 <h2 id="自定义"><span class="sec-num">8</span> 自定义</h2>
 <p>如需修改样式或行为,编辑 <code>md2html.py</code>:</p>
 <table>
@@ -866,6 +859,7 @@ md2html.bat 文档.md -o 输出\文档.html
 </tr>
 </tbody>
 </table>
+
 <h2 id="与其他工具对比"><span class="sec-num">9</span> 与其他工具对比</h2>
 <table>
 <thead>
@@ -882,7 +876,7 @@ md2html.bat 文档.md -o 输出\文档.html
 <td>md2html.py</td>
 <td>单 HTML 文件</td>
 <td>侧边栏 TOC + 滚动追踪</td>
-<td>Pygments</td>
+<td>内置轻量</td>
 <td>✅</td>
 </tr>
 <tr>
@@ -915,6 +909,7 @@ md2html.bat 文档.md -o 输出\文档.html
 </tr>
 </tbody>
 </table>
+
 </main>
 
 <script>

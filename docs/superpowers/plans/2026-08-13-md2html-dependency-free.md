@@ -890,7 +890,7 @@ Run: `python -S md2html.py "md2html工具说明.md"` → `[OK] Generated:`(零�
 - [ ] **Step 8: 浏览器结构检查**
 
 打开 `md2html工具说明.html` 检查(子代理可做结构 grep 代理,视觉由用户确认):
-- `grep -c 'class="highlight"'` ≥ 1 且 `grep -c '<span class="k"'` ≥ 1(高亮 span 存在)
+- `grep -c 'class="highlight"'` ≥ 1 且高亮 span 总量 ≥ 1(执行 `grep -o '<span class="[a-z0-9]*"' ... | wc -l`;注意:本说明文档的代码示例以注释/内置/函数调用为主,`<span class="k"`(裸关键字)可能为 0,以 span 总量为准)
 - `grep -c '<table>'` ≥ 1(表格)
 - `grep -c '<blockquote>'` ≥ 1(引用)
 - `grep -c 'sec-num'` ≥ 1(章节编号)

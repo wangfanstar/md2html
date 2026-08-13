@@ -4,21 +4,15 @@
 
 `md2html.py` 将 Markdown 文件(默认 `README.md`)转换为带**侧边栏目录导航**的独立 HTML 文件。
 
-- 单文件工具,拷贝即用,无需安装
+- 单文件工具,拷贝即用,**零第三方依赖**(纯 Python 标准库,无需 pip install)
 - 生成的 HTML 可离线使用——CSS 和 JavaScript 全部内嵌
 - 跨平台:Windows / Linux / macOS 均可运行,附 `md2html.bat` / `md2html.sh` 启动脚本
 
 ## 快速开始
 
-### 安装依赖
+### 环境要求
 
-```bash
-pip install markdown pygments
-```
-
-(Pygments 用于代码高亮;缺 Pygments 时代码块不高亮,但转换仍可正常工作,建议安装。)
-
-> **注意:** `md2html.bat` 优先使用 `py -3` 启动器。若 `py -3` 与 `python` 指向不同的解释器,请确认 `py -3` 对应的 Python 也已安装依赖,否则会报 `ModuleNotFoundError: No module named 'markdown'`。
+**无需安装任何第三方依赖**——仅需 Python 3.8+(Markdown 解析与代码高亮均为内置实现,不会再出现 `No module named markdown` 报错)。
 
 ### Windows
 
@@ -121,11 +115,10 @@ options:
 
 ## 依赖
 
-| 依赖 | 安装 | 说明 |
-|------|------|------|
-| Python | 3.8+ | Windows:python.org 安装并勾选 "Add to PATH" |
-| markdown | `pip install markdown` | Markdown 解析 |
-| Pygments | `pip install pygments` | 代码高亮(推荐安装) |
+| 依赖 | 说明 |
+|------|------|
+| Python | 3.8+(唯一要求,Windows:python.org 安装并勾选 "Add to PATH") |
+| 第三方库 | 无(Markdown 解析与代码高亮均为内置实现) |
 
 ## 生成的 HTML 特性
 
@@ -160,8 +153,8 @@ options:
 
 ### 代码块
 
-- 使用 **Pygments** 进行语法高亮
-- 自动检测语言(bash / yaml / c / python / jinja2 等)
+- 使用**内置轻量高亮器**(标准库正则实现)进行语法高亮
+- 按围栏语言标签高亮(python / bash / yaml / json / sql / c / cpp / js / bat / html 等,未知语言纯文本)
 - 支持明暗双主题(跟随系统 `prefers-color-scheme`)
 - 横向溢出时出现滚动条,不会撑破布局
 
@@ -208,12 +201,11 @@ CSS 使用 `prefers-color-scheme: dark` 媒体查询自动切换:
 输入 .md 文件(默认 README.md)
     │
     ▼ 标题提取:--title > 第一个 h1 > 文件名
-    ▼ Python markdown 库 + extensions
-    │  ├─ fenced_code  → 围栏代码块
-    │  ├─ tables       → GFM 表格
-    │  ├─ codehilite   → Pygments 语法高亮
-    │  ├─ nl2br        → 单换行转 <br>
-    │  └─ sane_lists   → 合理列表嵌套
+    ▼ 内置解析器(纯标准库,零依赖)
+    │  ├─ 块级:标题/段落/围栏代码/表格/引用/列表/hr
+    │  ├─ 行内:粗斜体/行内代码/链接/图片/转义/行内 HTML 透传
+    │  ├─ nl2br:段落内单换行转 <br>
+    │  └─ 内置高亮器:正则 token 扫描,输出 Pygments 同款 CSS 类
     │
     ▼ 后处理
     │  ├─ 移除静态 TOC(替换为侧边栏导航)
@@ -251,6 +243,7 @@ m = re.match(r'^(#{2,4})\s+(.+)$', line)
 - 读写均显式 `encoding='utf-8'`(输出无 BOM、`\n` 换行,浏览器兼容性最好)
 - 启动时对 stdout/stderr 做 UTF-8 reconfigure,避免 Windows GBK 控制台打印中文乱码
 - 启动脚本自动探测解释器:`md2html.bat` 依次尝试 `py -3` / `python` / `python3`;`md2html.sh` 依次尝试 `python3` / `python`
+- 零第三方依赖:`python -S`(跳过 site-packages)下可完整运行,不会出现 `No module named markdown`
 
 ## 自定义
 
@@ -271,7 +264,7 @@ m = re.match(r'^(#{2,4})\s+(.+)$', line)
 
 | 工具 | 输出 | 导航 | 代码高亮 | 离线 |
 |------|------|------|---------|------|
-| md2html.py | 单 HTML 文件 | 侧边栏 TOC + 滚动追踪 | Pygments | ✅ |
+| md2html.py | 单 HTML 文件 | 侧边栏 TOC + 滚动追踪 | 内置轻量 | ✅ |
 | grip | GitHub 预览 | 无 | GitHub 风格 | ❌ (需网络) |
 | markdown-pdf | PDF | 无 | 有 | ✅ |
 | docsify | SPA 站点 | 侧边栏 | Prism.js | ✅ (需本地服务) |

@@ -102,10 +102,191 @@ def _render_inline(text):
     return ''.join(out)
 
 
+_HL_ALIASES = {
+    'py': 'python', 'python3': 'python',
+    'sh': 'bash', 'shell': 'bash', 'zsh': 'bash',
+    'c++': 'cpp', 'cxx': 'cpp', 'cc': 'cpp',
+    'js': 'javascript', 'ts': 'javascript',
+    'yml': 'yaml',
+    'cmd': 'bat', 'dosbatch': 'bat',
+    'xml': 'html',
+}
+
+_HL_SPECS = {
+    'python': {
+        'comment': r'#[^\n]*',
+        'strings': [
+            r'(?:[rbfu]{0,2})"(?:[^"\\\n]|\\.)*"',
+            r"(?:[rbfu]{0,2})'(?:[^'\\\n]|\\.)*'",
+            r'(?:[rbfu]{0,2})"""(?:[^"\\]|\\[\s\S]|"(?!""))*"""',
+            r"(?:[rbfu]{0,2})'''(?:[^'\\]|\\[\s\S]|'(?!''))*'''",
+        ],
+        'keywords': ['def', 'class', 'return', 'if', 'elif', 'else', 'for',
+                     'while', 'in', 'not', 'and', 'or', 'import', 'from', 'as',
+                     'try', 'except', 'finally', 'raise', 'with', 'lambda',
+                     'yield', 'pass', 'break', 'continue', 'global', 'nonlocal',
+                     'del', 'assert', 'is', 'None', 'True', 'False', 'async',
+                     'await'],
+        'builtins': ['print', 'len', 'range', 'str', 'int', 'float', 'list',
+                     'dict', 'set', 'tuple', 'bool', 'type', 'open', 'input',
+                     'sum', 'min', 'max', 'sorted', 'enumerate', 'zip', 'map',
+                     'filter', 'any', 'all', 'isinstance', 'issubclass',
+                     'super', 'self'],
+        'decorator': r'@[\w.]+',
+    },
+    'bash': {
+        'comment': r'#[^\n]*',
+        'strings': [r'"(?:[^"\\\n]|\\.)*"', r"'(?:[^'\\\n]|\\.)*'"],
+        'keywords': ['if', 'then', 'else', 'elif', 'fi', 'for', 'while', 'do',
+                     'done', 'case', 'esac', 'in', 'function', 'local',
+                     'export', 'return', 'exit'],
+        'builtins': ['echo', 'cd', 'ls', 'grep', 'sed', 'awk', 'cat', 'mkdir',
+                     'rm', 'cp', 'mv', 'chmod', 'chown', 'printf', 'source',
+                     'set', 'unset', 'readonly', 'read', 'true', 'false',
+                     'command', 'exec', 'which', 'find', 'xargs', 'curl',
+                     'wget', 'tar', 'sudo', 'pip', 'python', 'python3', 'git'],
+        'variable': r'\$[\w{}]+',
+    },
+    'yaml': {
+        'comment': r'#[^\n]*',
+        'strings': [r'"(?:[^"\\\n]|\\.)*"', r"'(?:[^'\\\n]|\\.)*'"],
+        'keywords': ['true', 'false', 'null', 'yes', 'no'],
+        'variable': r'^[\s\-]*[\w.-]+(?=\s*:)',
+    },
+    'json': {
+        'strings': [r'"(?:[^"\\\n]|\\.)*"'],
+        'keywords': ['true', 'false', 'null'],
+    },
+    'sql': {
+        'comment': r'--[^\n]*',
+        'strings': [r"'(?:[^'\\\n]|\\.)*'", r'"(?:[^"\\\n]|\\.)*"'],
+        'keywords': ['SELECT', 'FROM', 'WHERE', 'INSERT', 'INTO', 'VALUES',
+                     'UPDATE', 'SET', 'DELETE', 'CREATE', 'TABLE', 'DROP',
+                     'ALTER', 'JOIN', 'LEFT', 'RIGHT', 'INNER', 'OUTER', 'ON',
+                     'GROUP', 'BY', 'ORDER', 'HAVING', 'LIMIT', 'AND', 'OR',
+                     'NOT', 'NULL', 'AS', 'DISTINCT', 'COUNT', 'SUM', 'AVG',
+                     'MIN', 'MAX', 'PRIMARY', 'KEY', 'FOREIGN', 'REFERENCES',
+                     'INDEX', 'UNIQUE', 'DEFAULT', 'INT', 'VARCHAR', 'TEXT',
+                     'IF', 'EXISTS', 'CASE', 'WHEN', 'THEN', 'ELSE', 'END'],
+        'funcs': False,
+    },
+    'c': {
+        'comment': r'//[^\n]*',
+        'strings': [r'"(?:[^"\\\n]|\\.)*"', r"'(?:[^'\\\n]|\\.)*'"],
+        'keywords': ['int', 'char', 'float', 'double', 'void', 'return', 'if',
+                     'else', 'for', 'while', 'do', 'switch', 'case', 'break',
+                     'continue', 'struct', 'typedef', 'const', 'static',
+                     'unsigned', 'long', 'short', 'sizeof', 'enum', 'union',
+                     'extern', 'volatile', 'register', 'signed', 'goto',
+                     'NULL'],
+    },
+    'cpp': {
+        'comment': r'//[^\n]*',
+        'strings': [r'"(?:[^"\\\n]|\\.)*"', r"'(?:[^'\\\n]|\\.)*'"],
+        'keywords': ['int', 'char', 'float', 'double', 'void', 'return', 'if',
+                     'else', 'for', 'while', 'do', 'switch', 'case', 'break',
+                     'continue', 'struct', 'typedef', 'const', 'static',
+                     'unsigned', 'long', 'short', 'sizeof', 'enum', 'union',
+                     'extern', 'volatile', 'register', 'signed', 'class',
+                     'public', 'private', 'protected', 'namespace', 'template',
+                     'typename', 'new', 'delete', 'this', 'virtual', 'override',
+                     'using', 'bool', 'true', 'false', 'auto', 'nullptr',
+                     'try', 'catch', 'throw', 'constexpr'],
+    },
+    'javascript': {
+        'comment': r'//[^\n]*',
+        'strings': [r'"(?:[^"\\\n]|\\.)*"', r"'(?:[^'\\\n]|\\.)*'",
+                    r'`(?:[^`\\\n]|\\.)*`'],
+        'keywords': ['var', 'let', 'const', 'function', 'return', 'if', 'else',
+                     'for', 'while', 'do', 'switch', 'case', 'break',
+                     'continue', 'class', 'new', 'this', 'typeof',
+                     'instanceof', 'import', 'export', 'from', 'async',
+                     'await', 'try', 'catch', 'finally', 'throw', 'true',
+                     'false', 'null', 'undefined', 'delete', 'in', 'of',
+                     'extends', 'super', 'default'],
+    },
+    'bat': {
+        'comment': r'(?i)::[^\n]*|(?i)rem\s[^\n]*',
+        'strings': [r'"(?:[^"\\\n]|\\.)*"'],
+        'keywords': ['echo', 'set', 'if', 'else', 'for', 'goto', 'call', 'exit',
+                     'setlocal', 'endlocal', 'where', 'errorlevel', 'in', 'do',
+                     'not', 'pause', 'findstr', 'start', 'shift', 'pushd',
+                     'popd'],
+        'variable': r'%[^%\n]*%',
+    },
+    'html': {
+        'comment': r'<!--[\s\S]*?-->',
+        'strings': [r'"[^"\n]*"', r"'[^'\n]*'"],
+        'tag': r'</?[A-Za-z][^>\n]*>',
+        'keywords': ['DOCTYPE', 'html', 'head', 'body', 'meta', 'title', 'link',
+                     'script', 'style', 'div', 'span', 'p', 'a', 'img', 'ul',
+                     'ol', 'li', 'table', 'thead', 'tbody', 'tr', 'th', 'td',
+                     'h1', 'h2', 'h3', 'h4', 'h5', 'h6', 'br', 'hr', 'pre',
+                     'code', 'button', 'form', 'input', 'label', 'nav', 'main',
+                     'aside', 'header', 'footer', 'section', 'article',
+                     'strong', 'em', 'blockquote'],
+    },
+}
+
+
+def _build_hl_regex(spec):
+    parts = []
+    if 'comment' in spec:
+        parts.append(r'(?P<c>%s)' % spec['comment'])
+    for idx, s in enumerate(spec.get('strings', [])):
+        parts.append(r'(?P<s%d>%s)' % (idx, s))
+    if spec.get('keywords'):
+        parts.append(r'(?P<k>\b(?:%s)\b)'
+                     % '|'.join(sorted(spec['keywords'], key=len, reverse=True)))
+    if spec.get('builtins'):
+        parts.append(r'(?P<b>\b(?:%s)\b)'
+                     % '|'.join(sorted(spec['builtins'], key=len, reverse=True)))
+    if spec.get('variable'):
+        parts.append(r'(?P<v>%s)' % spec['variable'])
+    if spec.get('decorator'):
+        parts.append(r'(?P<d>%s)' % spec['decorator'])
+    if spec.get('tag'):
+        parts.append(r'(?P<t>%s)' % spec['tag'])
+    parts.append(r'(?P<m>\b\d+(?:\.\d+)?\b)')
+    if spec.get('funcs', True):
+        parts.append(r'(?P<f>\b\w+(?=\())')
+    return re.compile('|'.join(parts))
+
+
+_HL_CLASSES = {'c': 'c1', 'k': 'k', 'b': 'nb', 'm': 'mi',
+               'f': 'nf', 'd': 'nf', 'v': 'nv', 't': 'nc'}
+
+
+def _highlight_line(line, cre):
+    out = []
+    pos = 0
+    for m in cre.finditer(line):
+        if m.start() > pos:
+            out.append(_escape_html(line[pos:m.start()]))
+        g = m.lastgroup
+        if g and g[0] == 's':
+            cls = 's1' if g[-1] in '02' else 's2'
+        else:
+            cls = _HL_CLASSES[g[0]]
+        out.append(f'<span class="{cls}">{_escape_html(m.group())}</span>')
+        pos = m.end()
+    if pos < len(line):
+        out.append(_escape_html(line[pos:]))
+    return ''.join(out)
+
+
 def highlight_code(code, lang):
     """Highlight code for the given language; unknown language -> escaped
-    plain text. (Full tokenizer lands in Task 3.)"""
-    return _escape_html(code)
+    plain text. Always escapes input (XSS-safe)."""
+    key = (lang or '').lower()
+    spec = _HL_SPECS.get(_HL_ALIASES.get(key, key))
+    if spec is None:
+        return _escape_html(code)
+    try:
+        cre = _build_hl_regex(spec)
+        return '\n'.join(_highlight_line(line, cre) for line in code.split('\n'))
+    except Exception:
+        return _escape_html(code)
 
 
 def markdown_to_html(md_text):
